@@ -762,14 +762,23 @@ export default function UltimateBrainControlCenter() {
   }, [globalQuery]);
 
   async function saveMapping() {
-    try {
-      const res = await fetch("/api/ub/mapping", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(mapping) });
-      if (!res.ok) throw new Error("save failed");
-      await syncAll();
-    } catch(e) {
-      console.error(e);
-    }
+  try {
+    const res = await fetch("/api/ub/mapping", {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        // Incluye la clave sólo si existe una API key
+        "x-api-key": process.env.NEXT_PUBLIC_UB_API_KEY ?? "",
+      },
+      body: JSON.stringify(mapping),
+    });
+    if (!res.ok) throw new Error("save failed");
+    await syncAll();
+  } catch (e) {
+    console.error(e);
   }
+}
+
 
   function Field({ label, value, onChange, placeholder = "" }) {
     return (
