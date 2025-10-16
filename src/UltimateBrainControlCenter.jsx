@@ -479,6 +479,27 @@ function ProjectsPage({ projects }) {
   );
 }
 
+function AreasPage({ areas }) {
+  const cols = [
+    { key: "title", title: "Área" },
+    { key: "owner", title: "Responsable" },
+    { key: "mission", title: "Misión", render: (v) => v || "" },
+    { key: "tags", title: "Tags", render: (v) => (v || []).join(", ") },
+  ];
+  return (
+    <div className="space-y-6">
+      <div className="grid md:grid-cols-3 gap-4">
+        <Stat label="Total de áreas" value={areas.length} />
+        <Stat label="Con responsable" value={areas.filter((a) => a.owner).length} />
+        <Stat label="Sin misión" value={areas.filter((a) => !a.mission).length} />
+      </div>
+      <Card title="Áreas" subtitle="Responsables y propósito" right={<Badge>{areas.length}</Badge>}>
+        <DataTable columns={cols} rows={areas} />
+      </Card>
+    </div>
+  );
+}
+
 function NotesPage({ notes }) {
   const cols = [
     { key: "title", title: "Título" },
@@ -523,7 +544,7 @@ function HabitsPage({ habits }) {
   return (
     <div className="space-y-6">
       <div className="grid md:grid-cols-3 gap-4">
-        <Stat label="Racha más alta" value={Math.max(...habits.map((h) => h.streak))} />
+        <Stat label="Racha más alta" value={Math.max(0, ...habits.map((h) => h.streak))} />
         <Stat label="Hábitos activos" value={habits.length} />
         <Stat label="Hoy completados" value={habits.filter((h) => h.last === todayISO).length} />
       </div>
@@ -697,6 +718,7 @@ const NAV = [
   { id: "today", label: "Hoy", icon: <LayoutDashboard className="h-4 w-4" /> },
   { id: "tasks", label: "Tareas", icon: <CheckSquare className="h-4 w-4" /> },
   { id: "projects", label: "Proyectos", icon: <FolderKanban className="h-4 w-4" /> },
+  { id: "areas", label: "Áreas", icon: <ListTodo className="h-4 w-4" /> },
   { id: "notes", label: "Notas/Recursos", icon: <BookOpenText className="h-4 w-4" /> },
   { id: "goals", label: "Objetivos", icon: <Target className="h-4 w-4" /> },
   { id: "habits", label: "Hábitos", icon: <TimerReset className="h-4 w-4" /> },
@@ -885,6 +907,7 @@ export default function UltimateBrainControlCenter() {
       case "today":   return <TodayPage tasks={tasks} calendar={calendar} />;
       case "tasks":   return <TasksPage tasks={tasks} />;
       case "projects":return <ProjectsPage projects={projects} />;
+      case "areas":   return <AreasPage areas={areas} />;
       case "notes":   return <NotesPage notes={notes} />;
       case "goals":   return <GoalsPage goals={goals} />;
       case "habits":  return <HabitsPage habits={habits} />;

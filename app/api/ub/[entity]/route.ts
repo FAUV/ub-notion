@@ -12,7 +12,6 @@ function buildFilters(entity: string, props: any, searchParams: URLSearchParams)
   const and: any[] = []; const sorts: any[] = [];
   const q = searchParams.get("q"); if (q && props.title) and.push({ property: props.title, title: { contains: q } });
   if (entity === "tasks") {
-    if (props.status) and.push({ property: props.status, select: { does_not_equal: "Hecho" } });
     const status = searchParams.get("status"); if (status && props.status) and.push({ property: props.status, select: { equals: status } });
     const area = searchParams.get("area"); if (area && props.area) and.push({ property: props.area, select: { equals: area } });
     const dueFrom = searchParams.get("due_from"); const dueTo = searchParams.get("due_to");
