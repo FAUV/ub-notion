@@ -1,0 +1,1 @@
+import{b as r}from"./vendor-query-CfuGqJst.js";import{d as e}from"./index-uMaUSKow.js";const u={all:["journal"]};async function n(){return e.journal.orderBy("date").reverse().toArray()}function t(){return r({queryKey:u.all,queryFn:n,staleTime:6e4})}export{t as u};

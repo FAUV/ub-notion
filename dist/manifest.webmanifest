@@ -1,0 +1,1 @@
+{"name":"ub-notion PWA","short_name":"ub-notion","start_url":"/","display":"standalone","background_color":"#0b1220","lang":"es","scope":"/","theme_color":"#0ea5e9","icons":[{"src":"/pwa-192.png","sizes":"192x192","type":"image/png"},{"src":"/pwa-512.png","sizes":"512x512","type":"image/png"},{"src":"/maskable-512.png","sizes":"512x512","type":"image/png","purpose":"maskable"}]}

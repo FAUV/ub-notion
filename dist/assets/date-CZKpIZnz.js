@@ -1,0 +1,1 @@
+import{p as s}from"./parseISO-Clwiv-83.js";import{f as t,c as y}from"./index-uMaUSKow.js";const m=a=>a?s(a).getTime():void 0,f=(a,o)=>t(y(s(a),o),"yyyy-MM-dd"),p=a=>a?t(s(a),"yyyy-MM-dd"):"";export{f as a,p as f,m as t};

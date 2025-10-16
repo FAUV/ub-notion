@@ -1,0 +1,1 @@
+import{b as e}from"./vendor-query-CfuGqJst.js";import{d as r}from"./index-uMaUSKow.js";const t={all:["projects"]};async function o(){return r.projects.orderBy("name").toArray()}function a(){return e({queryKey:t.all,queryFn:o,staleTime:6e4})}export{t as p,a as u};

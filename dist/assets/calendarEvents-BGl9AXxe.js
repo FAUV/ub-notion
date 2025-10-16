@@ -1,0 +1,1 @@
+import{b as e}from"./vendor-query-CfuGqJst.js";import{d as r}from"./index-uMaUSKow.js";const a={all:["calendar-events"]};async function n(){return r.calendar.orderBy("date").toArray()}function u(){return e({queryKey:a.all,queryFn:n,staleTime:6e4})}export{u};

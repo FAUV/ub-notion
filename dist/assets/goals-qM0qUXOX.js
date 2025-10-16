@@ -1,0 +1,1 @@
+import{b as e}from"./vendor-query-CfuGqJst.js";import{d as r}from"./index-uMaUSKow.js";const o={all:["goals"]};async function a(){return r.goals.orderBy("title").toArray()}function l(){return e({queryKey:o.all,queryFn:a,staleTime:6e4})}export{l as u};

@@ -1,0 +1,1 @@
+import{b as e}from"./vendor-query-CfuGqJst.js";import{d as r}from"./index-uMaUSKow.js";const a={all:["areas"]};async function s(){return r.areas.orderBy("name").toArray()}function n(){return e({queryKey:a.all,queryFn:s,staleTime:6e4})}export{n as u};
