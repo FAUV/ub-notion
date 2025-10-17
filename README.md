@@ -11,10 +11,10 @@ Repo listo para desplegar en **Vercel** o **Docker**. Incluye:
 
 ## Puesta en marcha local
 ```bash
-pnpm i   # o npm i / yarn
-cp env.local.example .env.local
+npm install          # usa pnpm/yarn si prefieres
+cp .env.local.example .env.local
 # Rellena NOTION_TOKEN y (opcional) UB_API_KEY
-pnpm dev
+npm run dev
 ```
 
 ## Variables de entorno (/.env.local)
@@ -44,3 +44,10 @@ docker run -p 3000:3000 --env-file .env.local ub-notion:prod
 bash scripts/push_to_github.sh YOUR_GITHUB_USERNAME your-repo-name
 # Requiere exportar GITHUB_TOKEN con permisos repo
 ```
+
+## Notas de producción
+- Se requiere Node.js 20.x (`.nvmrc` incluido); CI valida en Node 20 y 22.
+- El `service worker` (`public/sw.js`) cachea shell + assets y se combina con `/offline` y el toast `app/app-update-toast.tsx`.
+- Sustituye los íconos de `public/*.png` por arte real antes de publicar.
+- Establece `CAP_SERVER_URL` (dominio HTTPS en producción) antes de empaquetar con Capacitor/iOS.
+- Actualiza `next.config.mjs` con tu dominio real en la directiva CSP (`https://YOUR_PROD_DOMAIN`).

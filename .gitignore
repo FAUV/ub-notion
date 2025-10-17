@@ -21,3 +21,6 @@
 # editor
 .vscode
 .idea
+env.local
+.env.local
+tsconfig.tsbuildinfo
