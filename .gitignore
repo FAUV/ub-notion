@@ -24,3 +24,5 @@
 env.local
 .env.local
 tsconfig.tsbuildinfo
+.env
+output/
