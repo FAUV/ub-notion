@@ -1,8 +1,15 @@
 import { Client } from "@notionhq/client";
 import fs from "node:fs"; import path from "node:path";
-const notion = new Client({ auth: process.env.NOTION_TOKEN });
-const CANDS = ["Tareas","Notas","Proyectos","Etiquetas","Contenido","Objetivos","Metas","Áreas","People","Books","Recipes","Studies","Tasks","Notes","Projects","Tags","Content","Goals","Creator's Companion","Content Calendar"];
-async function search(q:string){return notion.search({query:q,filter:{value:"database",property:"object"},sort:{direction:"descending",timestamp:"last_edited_time"},page_size:100});}
+const notion = new Client({ auth: process.env.NOTION_TOKEN, notionVersion: "2025-09-03" });
+const CANDS = ["Tareas","Notas","Proyectos","Etiquetas","Contenido","Objetivos","Metas","Áreas","Tasks","Notes","Projects","Tags","Content","Goals","Creator's Companion","Content Calendar","Estudios","Courses","Cursos","Modules","Módulos","Lessons","Lecciones","Sessions","Sesiones"];
+async function search(q:string){
+  return notion.search({
+    query:q,
+    filter:{value:"data_source",property:"object"},
+    sort:{direction:"descending",timestamp:"last_edited_time"},
+    page_size:100
+  });
+}
 async function retr(id:string){ // @ts-ignore
   return notion.databases.retrieve({ database_id:id });
 }

@@ -10,7 +10,13 @@ export default async function handler(req:NextApiRequest,res:NextApiResponse){
     }
     if(req.method==="POST"){
       const b=req.body??{};
-      const created=await notion.pages.create({ parent:{ database_id:DB }, properties:{ Name:{ title:[{ text:{ content:b.name??"Untitled" } }] }, URL: b.url?{ url:b.url }:undefined }});
+      const properties:any={
+        Name:{ title:[{ text:{ content:b.name??"Untitled" } }] }
+      };
+      if(b.url){
+        properties.URL={ url:b.url };
+      }
+      const created=await notion.pages.create({ parent:{ database_id:DB }, properties });
       res.status(201).json({ item:mapNote(created) }); return;
     }
     res.setHeader("Allow","GET,POST"); res.status(405).end("Method Not Allowed");
