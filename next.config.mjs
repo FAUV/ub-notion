@@ -25,7 +25,7 @@ const nextConfig = {
           {
             key: 'Content-Security-Policy-Report-Only',
             value:
-              "default-src 'self'; img-src 'self' data: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://api.notion.com https://*.vercel.app https://YOUR_PROD_DOMAIN; report-uri /api/csp-report"
+              "default-src 'self'; img-src 'self' data: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://api.notion.com https://*.vercel.app https://furcelay.com; report-uri /api/csp-report"
           }
         ]
       }
