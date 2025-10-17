@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   LayoutDashboard,
   CalendarDays,
@@ -269,6 +269,10 @@ function TodayPage({ tasks, calendar }) {
   const dueToday = tasks.filter((t) => t.due === todayISO && t.status !== "Hecho");
   const overdue = tasks.filter((t) => t.due && t.due < todayISO && t.status !== "Hecho");
   const nextUp = tasks.filter((t) => t.scheduled >= todayISO && t.status !== "Hecho").slice(0, 6);
+  const weekAheadLimit = new Date(Date.now() + 6 * 86400000).toISOString().slice(0, 10);
+  const weekAhead = tasks
+    .filter((t) => t.due && t.due >= todayISO && t.due <= weekAheadLimit && t.status !== "Hecho")
+    .sort((a, b) => String(a.due || "").localeCompare(String(b.due || "")));
 
   const last7 = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(Date.now() - (6 - i) * 86400000);
@@ -322,6 +326,30 @@ function TodayPage({ tasks, calendar }) {
                 <span className="text-xs">{formatTimeCL(e.start)}–{formatTimeCL(e.end)}</span>
               </li>
             ))}
+          </ul>
+        </Card>
+      </div>
+      <div className="grid md:grid-cols-2 gap-4">
+        <Card title="My Day" subtitle="Prioridades esenciales">
+          <ul className="space-y-2 text-sm">
+            {dueToday.slice(0, 5).map((t) => (
+              <li key={t.id} className="flex items-center justify-between gap-2">
+                <span>{t.title}</span>
+                <Badge>{t.priority ?? "—"}</Badge>
+              </li>
+            ))}
+            {dueToday.length === 0 && <li className="text-neutral-500">Lograste despejar el día ✨</li>}
+          </ul>
+        </Card>
+        <Card title="My Week" subtitle="Vista rápida 7 días">
+          <ul className="space-y-2 text-sm">
+            {weekAhead.slice(0, 6).map((t) => (
+              <li key={t.id} className="flex items-center justify-between gap-2">
+                <span>{t.title}</span>
+                <span className="text-xs">{t.due}</span>
+              </li>
+            ))}
+            {weekAhead.length === 0 && <li className="text-neutral-500">Semana despejada 🚀</li>}
           </ul>
         </Card>
       </div>
@@ -501,6 +529,31 @@ function AreasPage({ areas }) {
 }
 
 function NotesPage({ notes }) {
+  const tabs = [
+    { key: "inbox", label: "Inbox" },
+    { key: "notes", label: "Notes" },
+    { key: "fav", label: "Fav" },
+    { key: "clips", label: "Clips" },
+    { key: "voice", label: "Voice" },
+  ];
+  const [activeTab, setActiveTab] = useState("inbox");
+  const filtered = useMemo(() => {
+    const lowerKey = activeTab.toLowerCase();
+    const matcher = (note) => {
+      const status = String(note.status || note.type || "").toLowerCase();
+      const tags = Array.isArray(note.tags) ? note.tags.join(" ").toLowerCase() : String(note.tags || "").toLowerCase();
+      switch (lowerKey) {
+        case "inbox": return status.includes("inbox") || tags.includes("inbox");
+        case "notes": return status.includes("note") || tags.includes("note");
+        case "fav": return Boolean(note.favorite) || tags.includes("fav") || tags.includes("favorite");
+        case "clips": return status.includes("clip") || tags.includes("clip");
+        case "voice": return status.includes("voice") || tags.includes("voice");
+        default: return false;
+      }
+    };
+    const result = notes.filter(matcher);
+    return result.length ? result : notes;
+  }, [notes, activeTab]);
   const cols = [
     { key: "title", title: "Título" },
     { key: "type", title: "Tipo" },
@@ -511,8 +564,91 @@ function NotesPage({ notes }) {
   ];
   return (
     <div className="space-y-6">
-      <Card title="Notas y Recursos" subtitle="Índice" right={<Badge>{notes.length}</Badge>}>
-        <DataTable columns={cols} rows={notes} />
+      <Card
+        title="Notas y Recursos"
+        subtitle="Inbox y clasificaciones"
+        right={<Badge>{filtered.length}</Badge>}
+      >
+        <div className="flex flex-wrap items-center gap-2 mb-4 text-xs">
+          {tabs.map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={`px-3 py-1 rounded-full border transition-colors ${
+                activeTab === tab.key
+                  ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
+                  : "bg-transparent border-neutral-300 dark:border-neutral-700"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+        <DataTable columns={cols} rows={filtered} />
+      </Card>
+    </div>
+  );
+}
+
+function ContentPage({ entries }) {
+  const tabs = [
+    { key: "active", label: "Active Now" },
+    { key: "this-month", label: "This Month" },
+    { key: "ideas", label: "Ideas" },
+    { key: "planned", label: "Planned" },
+    { key: "review", label: "Review" },
+    { key: "published", label: "Published" },
+    { key: "archived", label: "Archived" },
+  ];
+  const [activeTab, setActiveTab] = useState("active");
+  const columns = [
+    { key: "title", title: "Título" },
+    { key: "status", title: "Estado" },
+    { key: "project", title: "Proyecto" },
+    { key: "due", title: "Fecha" },
+    { key: "tags", title: "Tags" },
+  ];
+  const filtered = useMemo(() => {
+    const normalize = (value) => String(value || "").toLowerCase();
+    const target = activeTab.replace("-", " ");
+    const list = entries.filter((item) => {
+      const status = normalize(item.status || item.stage || item.state);
+      const tags = normalize(Array.isArray(item.tags) ? item.tags.join(" ") : item.tags);
+      const bucket = status.includes(target) || tags.includes(target);
+      if (bucket) return true;
+      if (activeTab === "this-month" && item.due) {
+        const due = new Date(item.due);
+        const now = new Date();
+        return due.getMonth() === now.getMonth() && due.getFullYear() === now.getFullYear();
+      }
+      return false;
+    });
+    return list.length ? list : entries.slice(0, 10);
+  }, [entries, activeTab]);
+
+  return (
+    <div className="space-y-6">
+      <Card
+        title="Content Pipeline"
+        subtitle="Creator's Companion"
+        right={<Badge>{filtered.length}</Badge>}
+      >
+        <div className="flex flex-wrap items-center gap-2 mb-4 text-xs">
+          {tabs.map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={`px-3 py-1 rounded-full border transition-colors ${
+                activeTab === tab.key
+                  ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
+                  : "bg-transparent border-neutral-300 dark:border-neutral-700"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+        <DataTable columns={columns} rows={filtered} />
       </Card>
     </div>
   );
@@ -530,6 +666,23 @@ function GoalsPage({ goals }) {
           </Card>
         ))}
       </div>
+      <Card title="Timeline anual" subtitle="Próximos hitos">
+        <ol className="relative border-l border-neutral-300 dark:border-neutral-700 pl-4 space-y-4 text-sm">
+          {goals
+            .filter((g) => g.due)
+            .sort((a, b) => String(a.due || "").localeCompare(String(b.due || "")))
+            .map((goal) => (
+              <li key={goal.id} className="ml-2">
+                <span className="absolute -left-2 top-1.5 h-3 w-3 rounded-full bg-neutral-900 dark:bg-neutral-200" />
+                <div className="font-medium">{goal.title}</div>
+                <div className="text-xs text-neutral-500 dark:text-neutral-400">
+                  {goal.due} · {goal.horizon ?? 'Sin horizonte'} · {goal.area ?? 'Área global'}
+                </div>
+              </li>
+            ))}
+          {!goals.some((g) => g.due) && <li className="text-neutral-500">Añade fechas objetivo para poblar la línea de tiempo.</li>}
+        </ol>
+      </Card>
     </div>
   );
 }
@@ -718,6 +871,7 @@ const NAV = [
   { id: "today", label: "Hoy", icon: <LayoutDashboard className="h-4 w-4" /> },
   { id: "tasks", label: "Tareas", icon: <CheckSquare className="h-4 w-4" /> },
   { id: "projects", label: "Proyectos", icon: <FolderKanban className="h-4 w-4" /> },
+  { id: "content", label: "Contenido", icon: <BookOpenText className="h-4 w-4" /> },
   { id: "areas", label: "Áreas", icon: <ListTodo className="h-4 w-4" /> },
   { id: "notes", label: "Notas/Recursos", icon: <BookOpenText className="h-4 w-4" /> },
   { id: "goals", label: "Objetivos", icon: <Target className="h-4 w-4" /> },
@@ -756,7 +910,7 @@ export default function UltimateBrainControlCenter() {
     document.documentElement.classList.toggle("dark", themeDark);
   }, [themeDark]);
 
-  async function syncAll() {
+  const syncAll = useCallback(async () => {
     const [t, p, a, n, g, h, r, c, mp, st] = await Promise.all([
       ubGet("/api/ub/tasks",     { q: globalQuery, expand: "relations" }, MOCK.tasks),
       ubGet("/api/ub/projects",  { q: globalQuery },                      MOCK.projects),
@@ -774,14 +928,20 @@ export default function UltimateBrainControlCenter() {
     setCourses(st.courses || []); setReadings(st.readings || []); setStudyNotes(st.study_notes || []);
     setResources(st.resources || []); setExams(st.exams || []); setFlashcards(st.flashcards || []); setSessions(st.sessions || []);
     setLastSyncISO(new Date().toISOString());
-  }
-
-  useEffect(() => { syncAll(); }, []);
-
-  useEffect(()=> {
-    const id = setTimeout(()=> { syncAll(); }, 350);
-    return ()=> clearTimeout(id);
   }, [globalQuery]);
+
+  // Tracks initial sync to avoid debouncing the first load.
+  const didInitialSync = useRef(false);
+
+  useEffect(() => {
+    if (!didInitialSync.current) {
+      didInitialSync.current = true;
+      void syncAll();
+      return;
+    }
+    const id = setTimeout(() => { void syncAll(); }, 350);
+    return () => clearTimeout(id);
+  }, [globalQuery, syncAll]);
 
   async function saveMapping() {
   try {
@@ -908,6 +1068,7 @@ export default function UltimateBrainControlCenter() {
       case "tasks":   return <TasksPage tasks={tasks} />;
       case "projects":return <ProjectsPage projects={projects} />;
       case "areas":   return <AreasPage areas={areas} />;
+      case "content": return <ContentPage entries={notes} />;
       case "notes":   return <NotesPage notes={notes} />;
       case "goals":   return <GoalsPage goals={goals} />;
       case "habits":  return <HabitsPage habits={habits} />;
