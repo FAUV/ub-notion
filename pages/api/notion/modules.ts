@@ -1,11 +1,12 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { notion } from "./common";
+import { notion, findDbIdByNames } from "./common";
 import { mapModule } from "../../../lib/notion/study-map";
 export default async function handler(req:NextApiRequest,res:NextApiResponse){
   try{
-    const DB=process.env.UB_DB_MODULES_ID as string;
-    if(!DB) throw new Error("Falta UB_DB_MODULES_ID");
+    let DB = process.env.UB_DB_MODULES_ID as string | undefined;
+    if(!DB){ DB = await findDbIdByNames(["Módulos","Modulos","Modules"]) || undefined; }
+    if(!DB) throw new Error("Falta UB_DB_MODULES_ID y no se pudo resolver 'Módulos/Modules'");
     const r=await notion.databases.query({ database_id:DB, page_size:100, sorts:[{ timestamp:"last_edited_time", direction:"descending" }]});
-    res.status(200).json({ items: r.results.map(mapModule) });
+    res.status(200).json({ items: r.results.map(mapModule), dbId: DB, resolved: !process.env.UB_DB_MODULES_ID });
   }catch(e:any){res.status(500).json({ error:e.message??"error" });}
 }
