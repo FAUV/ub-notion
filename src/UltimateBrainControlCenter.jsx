@@ -43,6 +43,8 @@ const DEFAULT_MAPPING = {
     calendar: "",
     studies: {
       courses: "",
+      modules: "",
+      lessons: "",
       readings: "",
       study_notes: "",
       resources: "",
@@ -124,6 +126,12 @@ const DEFAULT_MAPPING = {
         provider: "Proveedor",
         tags: "Tags",
       },
+      modules: {
+        title: "Módulo",
+        status: "Estado",
+        course: "Curso",
+        order: "Orden",
+      },
       readings: {
         title: "Lectura",
         type: "Tipo",
@@ -132,6 +140,13 @@ const DEFAULT_MAPPING = {
         source: "Fuente",
         tags: "Tags",
         due: "Para",
+      },
+      lessons: {
+        title: "Lección",
+        module: "Módulo",
+        course: "Curso",
+        status: "Estado",
+        order: "Orden",
       },
       study_notes: {
         title: "Nota",
@@ -741,7 +756,7 @@ function CalendarPage({ calendar }) {
   );
 }
 
-function StudiesPage({ courses, readings, studyNotes, resources, exams, flashcards, sessions }) {
+function StudiesPage({ courses, modules, lessons, readings, studyNotes, resources, exams, flashcards, sessions }) {
   const tz = CL_TZ;
 
   const activeCourses = courses.filter((c) => (c.status ?? "Activo") !== "Completado");
@@ -749,6 +764,9 @@ function StudiesPage({ courses, readings, studyNotes, resources, exams, flashcar
     .filter((e) => e.date && new Date(e.date) >= new Date(new Date().toISOString().slice(0, 10)))
     .sort((a, b) => String(a.date).localeCompare(String(b.date)))
     .slice(0, 6);
+
+  const activeModules = modules.filter((m) => (m.status ?? "Activo") !== "Completado");
+  const pendingLessons = lessons.filter((l) => (l.status ?? "Activo") !== "Completado");
 
   const minutesLast14d = sessions
     .filter((s) => s.date)
@@ -770,6 +788,19 @@ function StudiesPage({ courses, readings, studyNotes, resources, exams, flashcar
     { key: "topic", title: "Tema" },
     { key: "notes", title: "Notas" },
   ];
+  const colsModules = [
+    { key: "title", title: "Módulo" },
+    { key: "course", title: "Curso" },
+    { key: "status", title: "Estado" },
+    { key: "order", title: "Orden" },
+  ];
+  const colsLessons = [
+    { key: "title", title: "Lección" },
+    { key: "module", title: "Módulo" },
+    { key: "course", title: "Curso" },
+    { key: "status", title: "Estado" },
+    { key: "order", title: "Orden" },
+  ];
   const colsNotes = [
     { key: "title", title: "Nota" },
     { key: "course", title: "Curso" },
@@ -788,11 +819,13 @@ function StudiesPage({ courses, readings, studyNotes, resources, exams, flashcar
 
   return (
     <div className="space-y-6">
-      <div className="grid md:grid-cols-4 gap-4">
+      <div className="grid md:grid-cols-3 lg:grid-cols-6 gap-4">
         <Stat label="Cursos activos" value={activeCourses.length} />
         <Stat label="Lecturas en progreso" value={readings.filter((r) => r.status !== "Completado").length} />
         <Stat label="Min últimos 14 días" value={minutesLast14d} />
         <Stat label="Exámenes próximos" value={upcomingExams.length} />
+        <Stat label="Módulos activos" value={activeModules.length} />
+        <Stat label="Lecciones pendientes" value={pendingLessons.length} />
       </div>
 
       <Card title="Progreso por curso" subtitle="% completado">
@@ -811,6 +844,15 @@ function StudiesPage({ courses, readings, studyNotes, resources, exams, flashcar
           ))}
         </div>
       </Card>
+
+      <div className="grid md:grid-cols-2 gap-4">
+        <Card title="Módulos" subtitle="Orden y estado">
+          <DataTable columns={colsModules} rows={[...modules].sort((a,b)=> Number(a.order??0) - Number(b.order??0))} />
+        </Card>
+        <Card title="Lecciones" subtitle="Progreso detallado">
+          <DataTable columns={colsLessons} rows={[...lessons].sort((a,b)=> Number(a.order??0) - Number(b.order??0))} />
+        </Card>
+      </div>
 
       <div className="grid md:grid-cols-2 gap-4">
         <Card title="Próximas evaluaciones" subtitle="6 siguientes">
@@ -857,7 +899,7 @@ function StudiesPage({ courses, readings, studyNotes, resources, exams, flashcar
 
 const MOCK = {
   tasks: [], projects: [], areas: [], notes: [], goals: [], habits: [], reviews: [], calendar: [],
-  studies: { courses: [], readings: [], study_notes: [], resources: [], exams: [], flashcards: [], sessions: [] }
+  studies: { courses: [], modules: [], lessons: [], readings: [], study_notes: [], resources: [], exams: [], flashcards: [], sessions: [] }
 };
 
 async function ubGet(path, params = {}, fallback) {
@@ -899,6 +941,8 @@ export default function UltimateBrainControlCenter() {
   const [calendar, setCalendar] = useState(MOCK.calendar);
 
   const [courses, setCourses] = useState(MOCK.studies.courses);
+  const [modules, setModules] = useState(MOCK.studies.modules);
+  const [lessons, setLessons] = useState(MOCK.studies.lessons);
   const [readings, setReadings] = useState(MOCK.studies.readings);
   const [studyNotes, setStudyNotes] = useState(MOCK.studies.study_notes);
   const [resources, setResources] = useState(MOCK.studies.resources);
@@ -921,11 +965,12 @@ export default function UltimateBrainControlCenter() {
       ubGet("/api/ub/reviews",   { q: globalQuery },                      MOCK.reviews),
       ubGet("/api/ub/calendar",  { q: globalQuery, expand: "relations" }, MOCK.calendar),
       ubGet("/api/ub/mapping",   {},                                      DEFAULT_MAPPING),
-      ubGet("/api/ub/studies",   { q: globalQuery }, { courses: [], readings: [], study_notes: [], resources: [], exams: [], flashcards: [], sessions: [] }),
+      ubGet("/api/ub/studies",   { q: globalQuery }, { courses: [], modules: [], lessons: [], readings: [], study_notes: [], resources: [], exams: [], flashcards: [], sessions: [] }),
     ]);
     setTasks(t); setProjects(p); setAreas(a); setNotes(n); setGoals(g); setHabits(h); setReviews(r); setCalendar(c);
     setMapping(mp);
-    setCourses(st.courses || []); setReadings(st.readings || []); setStudyNotes(st.study_notes || []);
+    setCourses(st.courses || []); setModules(st.modules || []); setLessons(st.lessons || []);
+    setReadings(st.readings || []); setStudyNotes(st.study_notes || []);
     setResources(st.resources || []); setExams(st.exams || []); setFlashcards(st.flashcards || []); setSessions(st.sessions || []);
     setLastSyncISO(new Date().toISOString());
   }, [globalQuery]);
@@ -1075,7 +1120,8 @@ export default function UltimateBrainControlCenter() {
       case "reviews": return <ReviewsPage reviews={reviews} />;
       case "calendar":return <CalendarPage calendar={calendar} />;
       case "studies": return <StudiesPage
-                              courses={courses} readings={readings} studyNotes={studyNotes}
+                              courses={courses} modules={modules} lessons={lessons}
+                              readings={readings} studyNotes={studyNotes}
                               resources={resources} exams={exams} flashcards={flashcards} sessions={sessions} />;
       case "settings":return <SettingsPage mapping={mapping} setMapping={setMapping} onSync={syncAll} />;
       default: return null;
