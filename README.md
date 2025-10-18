@@ -24,6 +24,16 @@ npm run dev
 - `NEXT_PUBLIC_UB_API_KEY` (opcional): expuesto al cliente, se usa para llamar a `/api/ub/*`.
 - `VERCEL_*` (opcional para CI/CD): `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`.
 
+## Flujo de edición (CRUD sobre Notion)
+- Define `NEXT_PUBLIC_UB_API_KEY` junto a `UB_API_KEY` cuando quieras permitir altas/ediciones desde la UI. El valor se envía en la cabecera `x-api-key` al consumir `/api/ub/*`.
+- Los helpers del servidor (`createPageFromMapping`, `updatePageFromMapping` y `deletePage`) construyen automáticamente el payload según el mapping persistido en `.ub_mapping.json` y llaman a `notion.pages.create/update`.
+- Las rutas HTTP aceptan:
+  - `POST /api/ub/[entity]` para crear un registro usando el mapping de la entidad.
+  - `PATCH /api/ub/[entity]/[id]` para actualizar campos específicos.
+  - `DELETE /api/ub/[entity]/[id]` para archivar la página en Notion.
+- En el panel `Ultimate Brain – Control Center` cada tabla muestra un botón **Crear** y acciones por fila (editar/eliminar). Los formularios modales reutilizables (`src/components/forms/*`) validan datos básicos, consumen los endpoints anteriores y refrescan la vista al finalizar, mostrando feedback de éxito o error.
+- Asegúrate de mapear correctamente tus propiedades de Notion y de tener `NOTION_TOKEN` configurado; sin ello, los helpers no podrán inferir tipos y las operaciones fallarán.
+
 ## Despliegue con Vercel (CI/CD)
 1. Crea repo en GitHub y **sube** este código (ver `scripts/push_to_github.sh`).
 2. En GitHub → *Settings → Secrets and variables → Actions*, añade:
