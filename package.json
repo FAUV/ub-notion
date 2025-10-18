@@ -15,7 +15,8 @@
     "ios:open": "npx cap open ios",
     "build:ios": "npm run build && npm run cap:copy && npm run ios:open",
     "discover": "DOTENV_CONFIG_PATH=.env.local tsx -r dotenv/config scripts/discover-notion.ts",
-    "validate": "DOTENV_CONFIG_PATH=.env.local tsx -r dotenv/config scripts/validate-ub.ts"
+    "validate": "DOTENV_CONFIG_PATH=.env.local tsx -r dotenv/config scripts/validate-ub.ts",
+    "diag": "DOTENV_CONFIG_PATH=.env.local tsx -r dotenv/config scripts/diag-ds.ts"
   },
   "dependencies": {
     "@capacitor/core": "^6.1.0",

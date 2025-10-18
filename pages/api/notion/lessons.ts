@@ -1,12 +1,29 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { notion, findDbIdByNames } from "./common";
+import { notion, findDbIdByNames, buildProps, normalizePageId, normalizeUuid, queryDataSource } from "./common";
 import { mapLesson } from "../../../lib/notion/study-map";
 export default async function handler(req:NextApiRequest,res:NextApiResponse){
   try{
-    let DB = process.env.UB_DB_LESSONS_ID as string | undefined;
-    if(!DB){ DB = await findDbIdByNames(["Lecciones","Lessons"]) || undefined; }
-    if(!DB) throw new Error("Falta UB_DB_LESSONS_ID y no se pudo resolver 'Lecciones/Lessons'");
-    const r=await notion.databases.query({ database_id:DB, page_size:100, sorts:[{ timestamp:"last_edited_time", direction:"descending" }]});
-    res.status(200).json({ items: r.results.map(mapLesson), dbId: DB, resolved: !process.env.UB_DB_LESSONS_ID });
+    let DS = process.env.UB_DB_LESSONS_ID as string | undefined; if(DS) DS=normalizeUuid(DS); else DS = await findDbIdByNames(["Lecciones","Lessons"]) || undefined;
+    if(!DS) throw new Error("Falta UB_DB_LESSONS_ID y no se pudo resolver 'Lecciones/Lessons'");
+
+    if(req.method==="GET"){
+      const r = await queryDataSource(DS, { sorts:[{ timestamp:"last_edited_time", direction:"descending" }] });
+      res.status(200).json({ items: r.results.map(mapLesson), dbId: DS, resolved: !process.env.UB_DB_LESSONS_ID }); return;
+    }
+
+    if(req.method==="POST"){
+      const b=req.body??{}; const props = await buildProps(DS, { name:b.name, status:b.status, order: typeof b.order==='number'?b.order:undefined, relations:[{ keyCandidates:["Module","Módulo","Modulo"], ids:Array.isArray(b.moduleIds)?b.moduleIds:[] }] });
+      const created = await notion.request({ method:"post", path:"pages", body:{ parent:{ type:"data_source_id", data_source_id: DS }, properties: props } }) as any;
+      res.status(201).json({ item: mapLesson(created) }); return;
+    }
+
+    if(req.method==="PATCH"){
+      const raw = String(req.query.id||""); if(!raw) return res.status(400).json({ error:"Falta id" });
+      const id = normalizePageId(raw); const b=req.body??{}; const props = await buildProps(DS, { name:b.name, status:b.status, order: typeof b.order==='number'?b.order:undefined, relations:[{ keyCandidates:["Module","Módulo","Modulo"], ids:Array.isArray(b.moduleIds)?b.moduleIds:[] }] });
+      const updated = await notion.pages.update({ page_id:id, properties: props });
+      res.status(200).json({ item: mapLesson(updated) }); return;
+    }
+
+    res.setHeader("Allow","GET,POST,PATCH"); res.status(405).end("Method Not Allowed");
   }catch(e:any){res.status(500).json({ error:e.message??"error" });}
 }
