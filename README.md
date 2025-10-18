@@ -22,7 +22,11 @@ npm run dev
 - `NOTION_TIMEZONE` (opcional, por defecto America/Santiago).
 - `UB_API_KEY` (opcional): si se define, los endpoints exigirán `x-api-key` o `?api_key=`.
 - `NEXT_PUBLIC_UB_API_KEY` (opcional): expuesto al cliente, se usa para llamar a `/api/ub/*`.
+- `UB_MAPPING_BLOCK_ID` (opcional): ID de un bloque de código en Notion donde se persistirá el mapping (`json`).
+- `UB_MAPPING_PAGE_ID` (opcional): alternativa al bloque; si se indica, se usará el primer bloque `code/json` de esa página para guardar el mapping.
 - `VERCEL_*` (opcional para CI/CD): `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`.
+
+> **Nota:** si no configuras bloque/página, el mapping se seguirá guardando en `.ub_mapping.json` en el filesystem. Para despliegues en Vercel u otras plataformas serverless se recomienda usar Notion para persistencia duradera.
 
 ## Despliegue con Vercel (CI/CD)
 1. Crea repo en GitHub y **sube** este código (ver `scripts/push_to_github.sh`).
@@ -51,3 +55,29 @@ bash scripts/push_to_github.sh YOUR_GITHUB_USERNAME your-repo-name
 - Sustituye los íconos de `public/*.png` por arte real antes de publicar.
 - Establece `CAP_SERVER_URL` (dominio HTTPS en producción) antes de empaquetar con Capacitor/iOS.
 - Actualiza `next.config.mjs` con tu dominio real en la directiva CSP (`https://YOUR_PROD_DOMAIN`).
+
+## API `/api/ub/*`
+
+Las rutas App Router de `/api/ub/{entity}` ahora soportan **CRUD completo** usando el mapping configurado:
+
+| Método | Ruta                               | Ejemplo payload                                         |
+|--------|------------------------------------|---------------------------------------------------------|
+| `GET`  | `/api/ub/tasks?expand=relations`   | —                                                       |
+| `POST` | `/api/ub/tasks`                    | `{ "title": "Nueva tarea", "status": "Por hacer" }`    |
+| `PATCH`| `/api/ub/projects?id=...`          | `{ "id": "...", "progress": 55 }`                     |
+| `DELETE`| `/api/ub/calendar`                | `{ "id": "..." }`                                     |
+
+Para la rama de estudios, usa el parámetro `collection`:
+
+```http
+POST /api/ub/studies?collection=courses
+Body: { "title": "Curso", "status": "Activo" }
+
+PATCH /api/ub/studies
+Body: { "id": "...", "collection": "readings", "status": "En curso" }
+
+DELETE /api/ub/studies
+Body: { "id": "...", "collection": "flashcards" }
+```
+
+> Recuerda enviar `x-api-key` cuando hayas definido `UB_API_KEY`/`NEXT_PUBLIC_UB_API_KEY`.
