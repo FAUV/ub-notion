@@ -4,5 +4,11 @@
   "buildCommand": "npm run build",
   "devCommand": "npm run dev",
   "outputDirectory": ".next",
-  "git": { "enabled": true }
+  "git": { "enabled": true },
+  "env": {
+    "KV_REST_API_URL": "@kv-rest-api-url",
+    "KV_REST_API_TOKEN": "@kv-rest-api-token",
+    "KV_REST_API_READ_ONLY_TOKEN": "@kv-rest-api-read-only-token",
+    "KV_REST_API_WRITE_ONLY_TOKEN": "@kv-rest-api-write-only-token"
+  }
 }

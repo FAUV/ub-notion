@@ -989,22 +989,35 @@ export default function UltimateBrainControlCenter() {
   }, [globalQuery, syncAll]);
 
   async function saveMapping() {
-  try {
-    const res = await fetch("/api/ub/mapping", {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        // Incluye la clave sólo si existe una API key
-        "x-api-key": process.env.NEXT_PUBLIC_UB_API_KEY ?? "",
-      },
-      body: JSON.stringify(mapping),
-    });
-    if (!res.ok) throw new Error("save failed");
-    await syncAll();
-  } catch (e) {
-    console.error(e);
+    try {
+      const res = await fetch("/api/ub/mapping", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": process.env.NEXT_PUBLIC_UB_API_KEY ?? "",
+        },
+        body: JSON.stringify(mapping),
+      });
+      if (!res.ok) {
+        let message = "No se pudo guardar el mapping.";
+        try {
+          const json = await res.json();
+          if (json?.error) message = json.error;
+        } catch (err) {
+          // Ignora errores al parsear el cuerpo
+        }
+        return { ok: false, error: message };
+      }
+      const json = await res.json().catch(() => null);
+      if (!json?.ok) {
+        return { ok: false, error: "El servicio no confirmó el guardado." };
+      }
+      return { ok: true };
+    } catch (e) {
+      console.error(e);
+      return { ok: false, error: e instanceof Error ? e.message : "Error desconocido" };
+    }
   }
-}
 
 
   function Field({ label, value, onChange, placeholder = "" }) {
@@ -1067,6 +1080,7 @@ export default function UltimateBrainControlCenter() {
   function SettingsPage({ mapping, setMapping, onSync }) {
     const [saving, setSaving] = useState(false);
     const [savedAt, setSavedAt] = useState(null);
+    const [saveError, setSaveError] = useState(null);
     const set = (path, value) => {
       setMapping((m) => {
         const next = JSON.parse(JSON.stringify(m));
@@ -1078,8 +1092,24 @@ export default function UltimateBrainControlCenter() {
       });
     };
     async function handleSave() {
-      try { setSaving(true); await saveMapping(); setSavedAt(new Date().toISOString()); }
-      finally { setSaving(false); }
+      setSaveError(null);
+      try {
+        setSaving(true);
+        const result = await saveMapping();
+        if (result.ok) {
+          try {
+            await onSync();
+            setSavedAt(new Date().toISOString());
+          } catch (err) {
+            console.error(err);
+            setSaveError("Guardado, pero falló la sincronización. Inténtalo nuevamente.");
+          }
+        } else {
+          setSaveError(result.error ?? "No se pudo guardar el mapping. Intenta nuevamente.");
+        }
+      } finally {
+        setSaving(false);
+      }
     }
     return (
       <div className="space-y-6">
@@ -1093,6 +1123,7 @@ export default function UltimateBrainControlCenter() {
               {saving ? "Guardando…" : "Guardar mapping"}
             </button>
             {savedAt && <Badge>Guardado: {new Date(savedAt).toLocaleString("es-CL", { timeZone: CL_TZ })}</Badge>}
+            {saveError && <span className="text-xs text-rose-600">{saveError}</span>}
           </div>
         </Card>
         <Card title="Mapeo de propiedades" subtitle="Ajusta a los nombres exactos en tu UB">

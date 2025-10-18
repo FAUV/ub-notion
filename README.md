@@ -23,6 +23,16 @@ npm run dev
 - `UB_API_KEY` (opcional): si se define, los endpoints exigirán `x-api-key` o `?api_key=`.
 - `NEXT_PUBLIC_UB_API_KEY` (opcional): expuesto al cliente, se usa para llamar a `/api/ub/*`.
 - `VERCEL_*` (opcional para CI/CD): `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`.
+- `KV_REST_API_URL` / `KV_REST_API_TOKEN` (opcional pero recomendado en producción): credenciales de Vercel KV. Puedes añadir `KV_REST_API_READ_ONLY_TOKEN` y `KV_REST_API_WRITE_ONLY_TOKEN` si los usas.
+
+## Almacén del mapping (Vercel KV + fallback local)
+
+El mapeo de bases y propiedades (`/api/ub/mapping`) se persiste en Vercel KV cuando las variables `KV_REST_API_URL` y `KV_REST_API_TOKEN` están configuradas. El endpoint devuelve el JSON consolidado y confirma el guardado con `{ ok: true }`.
+
+- **Producción:** provisiona una base KV desde el dashboard de Vercel y expone las variables `KV_REST_API_URL`, `KV_REST_API_TOKEN` (y opcionalmente las variantes read-only/write-only) en tu entorno de despliegue.
+- **Desarrollo local:** si no se detectan credenciales KV, la app usa el archivo `.ub_mapping.json` de la raíz del proyecto como almacenamiento de respaldo.
+
+Cuando el guardado falla, la UI mostrará un mensaje de error y no intentará re-sincronizar hasta que exista confirmación de persistencia.
 
 ## Despliegue con Vercel (CI/CD)
 1. Crea repo en GitHub y **sube** este código (ver `scripts/push_to_github.sh`).

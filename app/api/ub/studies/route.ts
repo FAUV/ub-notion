@@ -1,12 +1,7 @@
 import { NextResponse } from "next/server";
-import { promises as fs } from "node:fs";
-import path from "node:path";
+import { loadMapping } from "@/lib/mappingStore";
 import { queryDb, getTitle, getSelect, getMulti, getDateISO, getNumber, getRich, getUrl, getRelationIds, resolveRelationTitles } from "@/lib/notion";
 import { apiKeyOk, rateLimitOk } from "../_utils/rateLimit";
-
-const FILE3 = path.join(process.cwd(), ".ub_mapping.json");
-async function loadMapping() { try { return JSON.parse(await fs.readFile(FILE3, "utf-8")); } catch { return null; } }
-function pick(p: any, key: string) { return p?.[key]; }
 
 export async function GET(req: Request) {
   if (!apiKeyOk(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -42,8 +37,8 @@ export async function GET(req: Request) {
   const tNotes = (pg: any) => { const p = pg.properties, mp = m.study_notes;
     return { id: pg.id, title: getTitle(p[mp.title]), course: getSelect(p[mp.course]), reading: getSelect(p[mp.reading]), concepts: getMulti(p[mp.concepts]), tags: getMulti(p[mp.tags]), updated: pg.last_edited_time };
   };
-  const tResources = (pg: any) => { const p = pg.properties, mp = m.resources; const raw = p[mp.link]; const url = getUrl(raw) || getRich(raw);
-    return { id: pg.id, title: getTitle(p[mp.title]), type: getSelect(p[mp.type]), link: url, course: getSelect(p[mp.course]), tags: getMulti(p[mp.tags]) };
+  const tResources = (pg: any) => { const p = pg.properties, mp = m.resources; const raw = p[mp.link]; const urlVal = getUrl(raw) || getRich(raw);
+    return { id: pg.id, title: getTitle(p[mp.title]), type: getSelect(p[mp.type]), link: urlVal, course: getSelect(p[mp.course]), tags: getMulti(p[mp.tags]) };
   };
   const tExams = (pg: any) => { const p = pg.properties, mp = m.exams;
     return { id: pg.id, title: getTitle(p[mp.title]), course: getSelect(p[mp.course]), date: getDateISO(p[mp.date]), weight: Number(getNumber(p[mp.weight]) ?? 0), status: getSelect(p[mp.status]), tags: getMulti(p[mp.tags]) };
