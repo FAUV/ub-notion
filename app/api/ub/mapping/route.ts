@@ -3,6 +3,8 @@ import { apiKeyOk, rateLimitOk } from "../_utils/rateLimit";
 import { DEFAULT_MAPPING } from "@/lib/mapping";
 import { readMapping, writeMapping } from "@/lib/mappingStore";
 
+const OFFLINE = process.env.UB_OFFLINE === "true";
+
 export async function GET(req: Request) {
   if (!apiKeyOk(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const ip = (req.headers.get("x-forwarded-for") || "").split(",")[0] || "local";
@@ -15,6 +17,9 @@ export async function PUT(req: Request) {
   if (!apiKeyOk(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const ip = (req.headers.get("x-forwarded-for") || "").split(",")[0] || "local";
   if (!rateLimitOk(`mapping:PUT:${ip}`)) return NextResponse.json({ error: "rate_limited" }, { status: 429 });
+  if (OFFLINE) {
+    return NextResponse.json({ error: "offline_mode" }, { status: 503 });
+  }
   const body = await req.json();
   const next = { ...DEFAULT_MAPPING, ...body };
   await writeMapping(next);

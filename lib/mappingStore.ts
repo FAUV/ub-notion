@@ -7,7 +7,7 @@ const FILE_PATH = path.join(process.cwd(), ".ub_mapping.json");
 const BLOCK_ID = process.env.UB_MAPPING_BLOCK_ID;
 const PAGE_ID = process.env.UB_MAPPING_PAGE_ID;
 
-const canUseNotion = Boolean(process.env.NOTION_TOKEN);
+const canUseNotion = Boolean(process.env.NOTION_TOKEN) && process.env.UB_OFFLINE !== "true";
 
 type CodeBlock = {
   object: "block";

@@ -15,6 +15,8 @@ import { apiKeyOk, rateLimitOk } from "../_utils/rateLimit";
 import { readMapping } from "@/lib/mappingStore";
 import { buildEntityProperties, type EntityName } from "@/lib/ub/entitySchemas";
 
+const OFFLINE = process.env.UB_OFFLINE === "true";
+
 function pick(p: any, key: string) { return p?.[key]; }
 
 const ALLOWED_ENTITIES: EntityName[] = [
@@ -167,6 +169,13 @@ export async function GET(req: Request, { params }: { params: { entity: string }
     return NextResponse.json({ error: "unknown_entity" }, { status: 400 });
   }
 
+  if (OFFLINE) {
+    return NextResponse.json([], {
+      status: 200,
+      headers: { "Cache-Control": "no-store" },
+    });
+  }
+
   const mapping = await ensureMapping();
   const dbId = mapping.db?.[entityParam];
   const props = mapping.props?.[entityParam];
@@ -221,6 +230,9 @@ export async function POST(req: Request, { params }: { params: { entity: string 
   if (!isEntity(params.entity)) {
     return NextResponse.json({ error: "unknown_entity" }, { status: 400 });
   }
+  if (OFFLINE) {
+    return NextResponse.json({ error: "offline_mode" }, { status: 503 });
+  }
   const body = await req.json();
   const mapping = await ensureMapping();
   const dbId = mapping.db?.[params.entity];
@@ -244,6 +256,9 @@ export async function PATCH(req: Request, { params }: { params: { entity: string
   if (!rateLimitOk(`entity:${params.entity}:PATCH:${ip}`)) return rateLimited();
   if (!isEntity(params.entity)) {
     return NextResponse.json({ error: "unknown_entity" }, { status: 400 });
+  }
+  if (OFFLINE) {
+    return NextResponse.json({ error: "offline_mode" }, { status: 503 });
   }
   const url = new URL(req.url);
   const body = await req.json();
@@ -271,6 +286,9 @@ export async function DELETE(req: Request, { params }: { params: { entity: strin
   if (!rateLimitOk(`entity:${params.entity}:DELETE:${ip}`)) return rateLimited();
   if (!isEntity(params.entity)) {
     return NextResponse.json({ error: "unknown_entity" }, { status: 400 });
+  }
+  if (OFFLINE) {
+    return NextResponse.json({ error: "offline_mode" }, { status: 503 });
   }
   const url = new URL(req.url);
   const body = req.method === "DELETE" ? await req.json().catch(() => ({})) : {};

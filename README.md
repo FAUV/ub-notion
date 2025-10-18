@@ -22,11 +22,25 @@ npm run dev
 - `NOTION_TIMEZONE` (opcional, por defecto America/Santiago).
 - `UB_API_KEY` (opcional): si se define, los endpoints exigirán `x-api-key` o `?api_key=`.
 - `NEXT_PUBLIC_UB_API_KEY` (opcional): expuesto al cliente, se usa para llamar a `/api/ub/*`.
+- `UB_OFFLINE` (opcional): ponlo en `true` para que las rutas `/api/ub/*` respondan en modo demo sin tocar Notion.
+- `NEXT_PUBLIC_UB_OFFLINE` (opcional): ponlo en `true` para que la UI use datos locales y no haga `fetch` (ideal para costo cero en Vercel).
 - `UB_MAPPING_BLOCK_ID` (opcional): ID de un bloque de código en Notion donde se persistirá el mapping (`json`).
 - `UB_MAPPING_PAGE_ID` (opcional): alternativa al bloque; si se indica, se usará el primer bloque `code/json` de esa página para guardar el mapping.
 - `VERCEL_*` (opcional para CI/CD): `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`.
 
 > **Nota:** si no configuras bloque/página, el mapping se seguirá guardando en `.ub_mapping.json` en el filesystem. Para despliegues en Vercel u otras plataformas serverless se recomienda usar Notion para persistencia duradera.
+
+## Operación costo cero (modo demo)
+
+Para garantizar que Vercel (u otro host) no genere cargos mientras exploras la interfaz:
+
+1. Define `UB_OFFLINE=true` y `NEXT_PUBLIC_UB_OFFLINE=true` en tu `.env.local` y en las variables del despliegue (si aplica).
+2. Con esas banderas activas, las rutas `/api/ub/*` responden con datos vacíos y bloquean POST/PATCH/DELETE, evitando llamadas a la API de Notion.
+3. La UI detecta el modo demo, evita hacer `fetch` y muestra un banner “Modo demo sin llamadas a Notion”.
+4. Si usas Vercel, deja deshabiladas las integraciones de Analytics/Speed Insights y realiza despliegues manuales (`vercel deploy`) sólo cuando quieras revisar cambios.
+5. Puedes pausar (o eliminar) los workflows de GitHub Actions de despliegue automático para mantenerte siempre en la capa gratuita.
+
+Con esta configuración, todo el tráfico queda en el navegador y no hay ejecución de funciones serverless, por lo que no se incurre en costes.
 
 ## Despliegue con Vercel (CI/CD)
 1. Crea repo en GitHub y **sube** este código (ver `scripts/push_to_github.sh`).

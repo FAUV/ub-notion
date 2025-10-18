@@ -14,6 +14,8 @@ import { apiKeyOk, rateLimitOk } from "../_utils/rateLimit";
 import { readMapping } from "@/lib/mappingStore";
 import { buildStudyProperties, type StudyCollections } from "@/lib/ub/entitySchemas";
 
+const OFFLINE = process.env.UB_OFFLINE === "true";
+
 const COLLECTIONS: StudyCollections[] = [
   "courses",
   "readings",
@@ -126,6 +128,21 @@ export async function GET(req: Request) {
   const ip = (req.headers.get("x-forwarded-for") || "").split(",")[0] || "local";
   if (!rateLimitOk(`studies:GET:${ip}`)) return NextResponse.json({ error: "rate_limited" }, { status: 429 });
 
+  if (OFFLINE) {
+    return NextResponse.json(
+      {
+        courses: [],
+        readings: [],
+        study_notes: [],
+        resources: [],
+        exams: [],
+        flashcards: [],
+        sessions: [],
+      },
+      { headers: { "Cache-Control": "no-store" } },
+    );
+  }
+
   const mapping = await ensureStudiesMapping();
   if (!mapping) {
     return NextResponse.json({
@@ -171,6 +188,9 @@ export async function POST(req: Request) {
   if (!apiKeyOk(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const ip = (req.headers.get("x-forwarded-for") || "").split(",")[0] || "local";
   if (!rateLimitOk(`studies:POST:${ip}`)) return NextResponse.json({ error: "rate_limited" }, { status: 429 });
+  if (OFFLINE) {
+    return NextResponse.json({ error: "offline_mode" }, { status: 503 });
+  }
   const body = await req.json();
   const url = new URL(req.url);
   const collection = (body.collection ?? url.searchParams.get("collection")) as string;
@@ -196,6 +216,9 @@ export async function PATCH(req: Request) {
   if (!apiKeyOk(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const ip = (req.headers.get("x-forwarded-for") || "").split(",")[0] || "local";
   if (!rateLimitOk(`studies:PATCH:${ip}`)) return NextResponse.json({ error: "rate_limited" }, { status: 429 });
+  if (OFFLINE) {
+    return NextResponse.json({ error: "offline_mode" }, { status: 503 });
+  }
   const url = new URL(req.url);
   const body = await req.json();
   const collection = (body.collection ?? url.searchParams.get("collection")) as string;
@@ -221,6 +244,9 @@ export async function DELETE(req: Request) {
   if (!apiKeyOk(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const ip = (req.headers.get("x-forwarded-for") || "").split(",")[0] || "local";
   if (!rateLimitOk(`studies:DELETE:${ip}`)) return NextResponse.json({ error: "rate_limited" }, { status: 429 });
+  if (OFFLINE) {
+    return NextResponse.json({ error: "offline_mode" }, { status: 503 });
+  }
   const url = new URL(req.url);
   const body = await req.json().catch(() => ({}));
   const collection = (body.collection ?? url.searchParams.get("collection")) as string;

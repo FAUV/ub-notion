@@ -36,8 +36,25 @@ import {
 import { DEFAULT_MAPPING } from "@/lib/mapping";
 
 const CL_TZ = "America/Santiago";
+const OFFLINE = process.env.NEXT_PUBLIC_UB_OFFLINE === "true";
+
+function safeClone(value) {
+  if (value === undefined) return undefined;
+  const cloneFn = typeof globalThis.structuredClone === "function" ? globalThis.structuredClone : null;
+  if (cloneFn) {
+    try {
+      return cloneFn(value);
+    } catch {}
+  }
+  try {
+    return JSON.parse(JSON.stringify(value));
+  } catch {
+    return value;
+  }
+}
 
 async function fetchWithFallback(url, fallbackData, timeoutMs = 6000) {
+  if (OFFLINE) return safeClone(fallbackData);
   try {
     const ctl = new AbortController();
     const to = setTimeout(() => ctl.abort(), timeoutMs);
@@ -1186,6 +1203,7 @@ const MOCK = {
 };
 
 async function ubGet(path, params = {}, fallback) {
+  if (OFFLINE) return safeClone(fallback);
   const sp = new URLSearchParams();
   Object.entries(params).forEach(([k,v]) => (v!==undefined && v!==null && v!=="") && sp.append(k, String(v)));
   const url = sp.toString() ? `${path}?${sp.toString()}` : path;
@@ -1615,6 +1633,10 @@ export default function UltimateBrainControlCenter() {
     if (!modal) return;
     const schema = formSchemas[modal.entity];
     if (!schema) return;
+    if (OFFLINE) {
+      setModalError("Modo demo: no se envían cambios a Notion.");
+      return;
+    }
     const payload = serializeForm(schema, modalForm);
     if (modal.mode === "edit" && modal.record?.id) payload.id = modal.record.id;
     const headers = { "Content-Type": "application/json" };
@@ -1646,6 +1668,12 @@ export default function UltimateBrainControlCenter() {
     async (entityKey, record) => {
       const schema = formSchemas[entityKey];
       if (!schema || !record?.id) return;
+      if (OFFLINE) {
+        if (typeof window !== "undefined") {
+          window.alert("Modo demo: no se eliminan registros en Notion.");
+        }
+        return;
+      }
       if (typeof window !== "undefined") {
         const confirmed = window.confirm("¿Eliminar este registro de Notion?");
         if (!confirmed) return;
@@ -1677,6 +1705,10 @@ export default function UltimateBrainControlCenter() {
   }, [themeDark]);
 
   const syncAll = useCallback(async () => {
+    if (OFFLINE) {
+      setLastSyncISO(new Date().toISOString());
+      return;
+    }
     const [t, p, a, n, g, h, r, c, mp, st] = await Promise.all([
       ubGet("/api/ub/tasks",     { q: globalQuery, expand: "relations" }, MOCK.tasks),
       ubGet("/api/ub/projects",  { q: globalQuery },                      MOCK.projects),
@@ -1710,22 +1742,27 @@ export default function UltimateBrainControlCenter() {
   }, [globalQuery, syncAll]);
 
   async function saveMapping() {
-  try {
-    const res = await fetch("/api/ub/mapping", {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        // Incluye la clave sólo si existe una API key
-        "x-api-key": process.env.NEXT_PUBLIC_UB_API_KEY ?? "",
-      },
-      body: JSON.stringify(mapping),
-    });
-    if (!res.ok) throw new Error("save failed");
-    await syncAll();
-  } catch (e) {
-    console.error(e);
+    if (OFFLINE) {
+      console.warn("Offline mode: mapping changes are not persisted on the server.");
+      setLastSyncISO(new Date().toISOString());
+      return;
+    }
+    try {
+      const res = await fetch("/api/ub/mapping", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          // Incluye la clave sólo si existe una API key
+          "x-api-key": process.env.NEXT_PUBLIC_UB_API_KEY ?? "",
+        },
+        body: JSON.stringify(mapping),
+      });
+      if (!res.ok) throw new Error("save failed");
+      await syncAll();
+    } catch (e) {
+      console.error(e);
+    }
   }
-}
 
 
   function Field({ label, value, onChange, placeholder = "" }) {
@@ -1944,12 +1981,33 @@ export default function UltimateBrainControlCenter() {
               <Search className="h-4 w-4" />
               <input placeholder="Buscar…" className="bg-transparent outline-none" value={globalQuery} onChange={(e)=> setGlobalQuery(e.target.value)} />
             </div>
-            <Badge><Database className="inline h-3 w-3 mr-1" /> Notion</Badge>
+            {OFFLINE ? (
+              <Badge>
+                <AlertTriangle className="inline h-3 w-3 mr-1" /> Modo demo
+              </Badge>
+            ) : (
+              <Badge><Database className="inline h-3 w-3 mr-1" /> Notion</Badge>
+            )}
             <Badge>Última sync: {new Date(lastSyncISO).toLocaleString("es-CL", { timeZone: CL_TZ })}</Badge>
             <button aria-label="toggle theme" onClick={() => setThemeDark((v) => !v)} className="h-9 w-9 rounded-2xl border border-neutral-200 dark:border-neutral-800 flex items-center justify-center">🌓</button>
           </div>
         </div>
       </header>
+      {OFFLINE && (
+        <div className="max-w-7xl mx-auto px-6 pt-6">
+          <div className="mb-6 rounded-2xl border border-amber-300/80 bg-amber-50/80 dark:border-amber-500/40 dark:bg-amber-900/20 p-4 text-sm text-amber-800 dark:text-amber-100">
+            <div className="flex gap-3">
+              <AlertTriangle className="h-5 w-5 mt-1" />
+              <div>
+                <div className="font-semibold">Modo demo sin llamadas a Notion</div>
+                <p>
+                  Con <code className="px-1 rounded bg-amber-200/60 dark:bg-amber-800/40">NEXT_PUBLIC_UB_OFFLINE=true</code> y <code className="px-1 rounded bg-amber-200/60 dark:bg-amber-800/40">UB_OFFLINE=true</code> la interfaz usa datos locales y evita invocar funciones serverless en Vercel, garantizando costo cero.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="max-w-7xl mx-auto px-6 py-6 grid lg:grid-cols-[220px_1fr] gap-6">
         <aside className="lg:sticky lg:top-[84px] h-max">
           <nav className="space-y-1">
