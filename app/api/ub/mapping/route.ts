@@ -8,7 +8,7 @@ const DEFAULT_MAPPING = {
   db: {
     tasks: "", projects: "", areas: "", notes: "", goals: "",
     habits: "", reviews: "", calendar: "",
-    studies: { courses: "", readings: "", study_notes: "", resources: "", exams: "", flashcards: "", sessions: "" },
+    studies: { courses: "", readings: "", study_notes: "", resources: "", exams: "", flashcards: "", sessions: "", modules: "", lessons: "" },
   },
   props: {
     tasks: { title: "Tarea", status: "Estado", project: "Proyecto", area: "Área", priority: "Prioridad", due: "Fecha límite", scheduled: "Programado", energy: "Energía", effort: "Esfuerzo", tags: "Tags", created: "Creado", updated: "Actualizado" },
@@ -21,7 +21,9 @@ const DEFAULT_MAPPING = {
     calendar: { title: "Evento", start: "Inicio", end: "Fin", related: "Relacionado" },
     studies: {
       courses: { title: "Curso", status: "Estado", area: "Área", progress: "Progreso", provider: "Proveedor", tags: "Tags" },
+      modules: { title: "Módulo", status: "Estado", course: "Curso", order: "Orden" },
       readings: { title: "Lectura", type: "Tipo", course: "Curso", status: "Estado", source: "Fuente", tags: "Tags", due: "Para" },
+      lessons: { title: "Lección", module: "Módulo", course: "Curso", status: "Estado", order: "Orden" },
       study_notes: { title: "Nota", course: "Curso", reading: "Lectura", concepts: "Conceptos", tags: "Tags", updated: "Actualizado" },
       resources: { title: "Recurso", type: "Tipo", link: "Enlace", course: "Curso", tags: "Tags" },
       exams: { title: "Evaluación", course: "Curso", date: "Fecha", weight: "Ponderación", status: "Estado", tags: "Tags" },
