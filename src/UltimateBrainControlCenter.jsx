@@ -136,6 +136,7 @@ const DEFAULT_MAPPING = {
         area: "Área",
         progress: "Progreso",
         provider: "Proveedor",
+        id_class: "ID Class",
         tags: "Tags",
       },
       modules: {
@@ -1047,6 +1048,15 @@ function StudiesPage({ courses, modules, lessons, readings, studyNotes, resource
     .filter((s) => new Date().getTime() - new Date(s.date).getTime() <= 14 * 86400000)
     .reduce((acc, s) => acc + (Number(s.duration) || 0), 0);
 
+  const colsCourses = [
+    { key: "title", title: "Curso" },
+    { key: "id_class", title: "ID Class" },
+    { key: "status", title: "Estado" },
+    { key: "progress", title: "Progreso", render: (v) => `${Math.round(v || 0)}%` },
+    { key: "area", title: "Área" },
+    { key: "provider", title: "Proveedor" },
+    { key: "tags", title: "Tags", render: (v) => (v || []).join(", ") },
+  ];
   const colsReadings = [
     { key: "title", title: "Lectura" },
     { key: "course", title: "Curso" },
@@ -1102,14 +1112,19 @@ function StudiesPage({ courses, modules, lessons, readings, studyNotes, resource
         <Stat label="Lecciones pendientes" value={pendingLessons.length} />
       </div>
 
+      <Card title="Cursos" subtitle="Resumen general" right={<Badge>{courses.length}</Badge>}>
+        <DataTable columns={colsCourses} rows={courses} />
+      </Card>
+
       <Card title="Progreso por curso" subtitle="% completado">
         <div className="grid md:grid-cols-2 gap-4">
           {activeCourses.map((c) => (
             <div key={c.id} className="rounded-xl border border-neutral-200/60 dark:border-neutral-800/60 p-3">
               <div className="flex justify-between text-sm font-medium">
-                <span>{c.title}</span>
+                <span className="truncate">{c.title}</span>
                 <span>{Math.round(c.progress || 0)}%</span>
               </div>
+              {c.id_class && <div className="text-xs mt-1 text-neutral-500">{c.id_class}</div>}
               <div className="mt-2 h-2 rounded bg-neutral-200/60 dark:bg-neutral-800/60">
                 <div className="h-2 rounded bg-neutral-900 dark:bg-white" style={{ width: `${Math.min(100, Math.max(0, c.progress || 0))}%` }} />
               </div>
@@ -1173,7 +1188,13 @@ function StudiesPage({ courses, modules, lessons, readings, studyNotes, resource
 
 const MOCK = {
   tasks: [], projects: [], areas: [], notes: [], goals: [], habits: [], reviews: [], calendar: [],
-  studies: { courses: [], modules: [], lessons: [], readings: [], study_notes: [], resources: [], exams: [], flashcards: [], sessions: [] }
+  studies: {
+    courses: [
+      { id: "mock-course-1", title: "Curso demo de enfoque", status: "Activo", area: "Productividad", progress: 60, provider: "Coursera", id_class: "EDU-101", tags: ["Hábitos"] },
+      { id: "mock-course-2", title: "Introducción a IA", status: "Completado", area: "Tecnología", progress: 100, provider: "Platzi", id_class: "AI-201", tags: ["IA", "Tech"] },
+    ],
+    modules: [], lessons: [], readings: [], study_notes: [], resources: [], exams: [], flashcards: [], sessions: [],
+  }
 };
 
 async function ubGet(path, params = {}, fallback) {
