@@ -17,10 +17,21 @@ export function normalizeUuid(input:string){
 }
 export const normalizePageId = normalizeUuid;
 
+export function toDsId(input:string){
+  const raw=(input||"").trim();
+  if(!raw) return raw;
+  const mUrl = raw.match(/[0-9a-fA-F]{32}/);
+  if(mUrl) return mUrl[0].toLowerCase();
+  const normalized = normalizeUuid(raw);
+  if(!normalized) return normalized;
+  const hex = normalized.replace(/-/g,"").toLowerCase();
+  return /^[0-9a-f]{32}$/.test(hex) ? hex : raw.toLowerCase();
+}
+
 // --- Esquema por DATA SOURCE
 const dsSchemaCache = new Map<string, any>();
 export async function getDbSchema(DS:string){
-  const id = normalizeUuid(DS);
+  const id = toDsId(DS);
   if(dsSchemaCache.has(id)) return dsSchemaCache.get(id);
   const s = await notion.request({ method:"get", path:`data_sources/${id}` }) as any;
   dsSchemaCache.set(id, s);
@@ -47,12 +58,12 @@ export async function findDbIdByNames(candidates: string[]): Promise<string|null
       body: { query:q, filter:{ value:"data_source", property:"object" }, sort:{ direction:"descending", timestamp:"last_edited_time" }, page_size: 20 }
     }) as any;
     const hit = (res.results||[])[0];
-    if(hit?.id) return normalizeUuid(hit.id);
+    if(hit?.id) return toDsId(hit.id);
   }
   return null;
 }
 export async function queryDataSource(DS:string, body:any={}){
-  const id = normalizeUuid(DS);
+  const id = toDsId(DS);
   const res = await notion.request({ method:"post", path:`data_sources/${id}/query`, body: { page_size: 100, ...body } }) as any;
   return res;
 }

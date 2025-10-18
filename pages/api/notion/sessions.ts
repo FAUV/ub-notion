@@ -1,9 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { notion, findDbIdByNames, buildProps, normalizePageId, normalizeUuid, queryDataSource } from "./common";
+import { notion, findDbIdByNames, buildProps, normalizePageId, queryDataSource, toDsId } from "./common";
 import { mapSession } from "../../../lib/notion/study-map";
 export default async function handler(req:NextApiRequest,res:NextApiResponse){
   try{
-    let DS = process.env.UB_DB_SESSIONS_ID as string | undefined; if(DS) DS=normalizeUuid(DS); else DS = await findDbIdByNames(["Sesiones","Sessions"]) || undefined;
+    let DS = process.env.UB_DB_SESSIONS_ID as string | undefined; if(DS) DS=toDsId(DS); else DS = await findDbIdByNames(["Sesiones","Sessions"]) || undefined;
     if(!DS) throw new Error("Falta UB_DB_SESSIONS_ID y no se pudo resolver 'Sesiones/Sessions'");
 
     if(req.method==="GET"){

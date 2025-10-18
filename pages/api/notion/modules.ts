@@ -1,9 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { notion, findDbIdByNames, buildProps, normalizePageId, normalizeUuid, queryDataSource } from "./common";
+import { notion, findDbIdByNames, buildProps, normalizePageId, queryDataSource, toDsId } from "./common";
 import { mapModule } from "../../../lib/notion/study-map";
 export default async function handler(req:NextApiRequest,res:NextApiResponse){
   try{
-    let DS = process.env.UB_DB_MODULES_ID as string | undefined; if(DS) DS=normalizeUuid(DS); else DS = await findDbIdByNames(["Módulos","Modulos","Modules"]) || undefined;
+    let DS = process.env.UB_DB_MODULES_ID as string | undefined; if(DS) DS=toDsId(DS); else DS = await findDbIdByNames(["Módulos","Modulos","Modules"]) || undefined;
     if(!DS) throw new Error("Falta UB_DB_MODULES_ID y no se pudo resolver 'Módulos/Modules'");
 
     if(req.method==="GET"){
