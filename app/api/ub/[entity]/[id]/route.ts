@@ -1,14 +1,15 @@
 import { NextResponse } from "next/server";
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import type { MappingStore } from "@/lib/mappingStore";
 import { deletePage, MappingValidationError, updatePageFromMapping } from "@/lib/notion";
 import { apiKeyOk, rateLimitOk } from "../../_utils/rateLimit";
 
 const FILE = path.join(process.cwd(), ".ub_mapping.json");
 
-async function loadMapping() {
+async function loadMapping(): Promise<MappingStore | null> {
   try {
-    return JSON.parse(await fs.readFile(FILE, "utf-8"));
+    return JSON.parse(await fs.readFile(FILE, "utf-8")) as MappingStore;
   } catch {
     return null;
   }

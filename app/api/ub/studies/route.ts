@@ -2,10 +2,17 @@ import { NextResponse } from "next/server";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { queryDb, getTitle, getSelect, getMulti, getDateISO, getNumber, getRich, getUrl, getRelationIds, resolveRelationTitles } from "@/lib/notion";
+import { DEFAULT_MAPPING, type MappingStore, type StudiesPropsMapping } from "@/lib/mappingStore";
 import { apiKeyOk, rateLimitOk } from "../_utils/rateLimit";
 
 const FILE3 = path.join(process.cwd(), ".ub_mapping.json");
-async function loadMapping() { try { return JSON.parse(await fs.readFile(FILE3, "utf-8")); } catch { return null; } }
+async function loadMapping(): Promise<MappingStore | null> {
+  try {
+    return JSON.parse(await fs.readFile(FILE3, "utf-8")) as MappingStore;
+  } catch {
+    return null;
+  }
+}
 function pick(p: any, key: string) { return p?.[key]; }
 
 export async function GET(req: Request) {
@@ -14,10 +21,11 @@ export async function GET(req: Request) {
   if (!rateLimitOk(`studies:${ip}`)) return NextResponse.json({ error: "rate_limited" }, { status: 429 });
 
   const mapping = await loadMapping();
-  if (!mapping?.db?.studies) {
+  if (!mapping || !mapping.db?.studies) {
     return NextResponse.json({ courses: [], modules: [], lessons: [], readings: [], study_notes: [], resources: [], exams: [], flashcards: [], sessions: [] });
   }
-  const d = mapping.db.studies; const m = mapping.props?.studies ?? {};
+  const d = mapping.db.studies;
+  const m: StudiesPropsMapping = mapping.props?.studies ?? DEFAULT_MAPPING.props.studies ?? {};
   const url = new URL(req.url); const q = url.searchParams.get("q");
   const filtersFor = (props: any) => (q && props?.title ? { filter: { property: props.title, title: { contains: q } } } : {});
 
@@ -33,27 +41,103 @@ export async function GET(req: Request) {
     d.lessons ? queryDb(d.lessons, filtersFor(m.lessons)) : [],
   ]);
 
-  const tCourses = (pg: any) => { const p = pg.properties, mp = m.courses;
-    const idClass = mp?.id_class ? (getSelect(p[mp.id_class]) ?? getRich(p[mp.id_class]) ?? null) : null;
-    return { id: pg.id, title: getTitle(p[mp.title]), status: getSelect(p[mp.status]) ?? "Activo", area: getSelect(p[mp.area]), progress: Number(getNumber(p[mp.progress]) ?? 0), provider: getSelect(p[mp.provider]), id_class: idClass, tags: getMulti(p[mp.tags]) };
+  const tCourses = (pg: any) => {
+    const p = pg.properties; const mp = m.courses ?? {};
+    const prop = (key?: string) => (key ? p[key] : undefined);
+    const idClassKey = mp?.id_class;
+    const idClassProp = idClassKey ? prop(idClassKey) : undefined;
+    const idClass = idClassProp ? (getSelect(idClassProp) ?? getRich(idClassProp) ?? null) : null;
+    return {
+      id: pg.id,
+      title: getTitle(prop(mp.title)),
+      status: getSelect(prop(mp.status)) ?? "Activo",
+      area: getSelect(prop(mp.area)),
+      progress: Number(getNumber(prop(mp.progress)) ?? 0),
+      provider: getSelect(prop(mp.provider)),
+      id_class: idClass,
+      tags: getMulti(prop(mp.tags)),
+    };
   };
-  const tReadings = (pg: any) => { const p = pg.properties, mp = m.readings;
-    return { id: pg.id, title: getTitle(p[mp.title]), type: getSelect(p[mp.type]), course: getSelect(p[mp.course]), status: getSelect(p[mp.status]), source: getSelect(p[mp.source]), tags: getMulti(p[mp.tags]), due: getDateISO(p[mp.due]) };
+  const tReadings = (pg: any) => {
+    const p = pg.properties; const mp = m.readings ?? {};
+    const prop = (key?: string) => (key ? p[key] : undefined);
+    return {
+      id: pg.id,
+      title: getTitle(prop(mp.title)),
+      type: getSelect(prop(mp.type)),
+      course: getSelect(prop(mp.course)),
+      status: getSelect(prop(mp.status)),
+      source: getSelect(prop(mp.source)),
+      tags: getMulti(prop(mp.tags)),
+      due: getDateISO(prop(mp.due)),
+    };
   };
-  const tNotes = (pg: any) => { const p = pg.properties, mp = m.study_notes;
-    return { id: pg.id, title: getTitle(p[mp.title]), course: getSelect(p[mp.course]), reading: getSelect(p[mp.reading]), concepts: getMulti(p[mp.concepts]), tags: getMulti(p[mp.tags]), updated: pg.last_edited_time };
+  const tNotes = (pg: any) => {
+    const p = pg.properties; const mp = m.study_notes ?? {};
+    const prop = (key?: string) => (key ? p[key] : undefined);
+    return {
+      id: pg.id,
+      title: getTitle(prop(mp.title)),
+      course: getSelect(prop(mp.course)),
+      reading: getSelect(prop(mp.reading)),
+      concepts: getMulti(prop(mp.concepts)),
+      tags: getMulti(prop(mp.tags)),
+      updated: pg.last_edited_time,
+    };
   };
-  const tResources = (pg: any) => { const p = pg.properties, mp = m.resources; const raw = p[mp.link]; const url = getUrl(raw) || getRich(raw);
-    return { id: pg.id, title: getTitle(p[mp.title]), type: getSelect(p[mp.type]), link: url, course: getSelect(p[mp.course]), tags: getMulti(p[mp.tags]) };
+  const tResources = (pg: any) => {
+    const p = pg.properties; const mp = m.resources ?? {};
+    const prop = (key?: string) => (key ? p[key] : undefined);
+    const raw = prop(mp.link);
+    const url = getUrl(raw) || getRich(raw);
+    return {
+      id: pg.id,
+      title: getTitle(prop(mp.title)),
+      type: getSelect(prop(mp.type)),
+      link: url,
+      course: getSelect(prop(mp.course)),
+      tags: getMulti(prop(mp.tags)),
+    };
   };
-  const tExams = (pg: any) => { const p = pg.properties, mp = m.exams;
-    return { id: pg.id, title: getTitle(p[mp.title]), course: getSelect(p[mp.course]), date: getDateISO(p[mp.date]), weight: Number(getNumber(p[mp.weight]) ?? 0), status: getSelect(p[mp.status]), tags: getMulti(p[mp.tags]) };
+  const tExams = (pg: any) => {
+    const p = pg.properties; const mp = m.exams ?? {};
+    const prop = (key?: string) => (key ? p[key] : undefined);
+    return {
+      id: pg.id,
+      title: getTitle(prop(mp.title)),
+      course: getSelect(prop(mp.course)),
+      date: getDateISO(prop(mp.date)),
+      weight: Number(getNumber(prop(mp.weight)) ?? 0),
+      status: getSelect(prop(mp.status)),
+      tags: getMulti(prop(mp.tags)),
+    };
   };
-  const tFlash = (pg: any) => { const p = pg.properties, mp = m.flashcards;
-    return { id: pg.id, front: getRich(p[mp.front]) || getTitle(p[mp.front]), back: getRich(p[mp.back]), deck: getSelect(p[mp.deck]), ease: Number(getNumber(p[mp.ease]) ?? 2.5), interval: Number(getNumber(p[mp.interval]) ?? 0), due: getDateISO(p[mp.due]) };
+  const tFlash = (pg: any) => {
+    const p = pg.properties; const mp = m.flashcards ?? {};
+    const prop = (key?: string) => (key ? p[key] : undefined);
+    const front = prop(mp.front);
+    const back = prop(mp.back);
+    return {
+      id: pg.id,
+      front: getRich(front) || getTitle(front),
+      back: getRich(back),
+      deck: getSelect(prop(mp.deck)),
+      ease: Number(getNumber(prop(mp.ease)) ?? 2.5),
+      interval: Number(getNumber(prop(mp.interval)) ?? 0),
+      due: getDateISO(prop(mp.due)),
+    };
   };
-  const tSessions = (pg: any) => { const p = pg.properties, mp = m.sessions;
-    return { id: pg.id, date: getDateISO(p[mp.date]), duration: Number(getNumber(p[mp.duration]) ?? 0), course: getSelect(p[mp.course]), topic: getRich(p[mp.topic]), notes: getRich(p[mp.notes]) };
+  const tSessions = (pg: any) => {
+    const p = pg.properties; const mp = m.sessions ?? {};
+    const prop = (key?: string) => (key ? p[key] : undefined);
+    return {
+      id: pg.id,
+      date: getDateISO(prop(mp.date)),
+      duration: Number(getNumber(prop(mp.duration)) ?? 0),
+      course: getSelect(prop(mp.course)),
+      topic: getRich(prop(mp.topic)),
+      notes: getRich(prop(mp.notes)),
+    };
   };
   const tModules = (pg: any) => {
     const p = pg.properties; const mp = m.modules ?? {};
