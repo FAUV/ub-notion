@@ -34,7 +34,8 @@ export async function GET(req: Request) {
   ]);
 
   const tCourses = (pg: any) => { const p = pg.properties, mp = m.courses;
-    return { id: pg.id, title: getTitle(p[mp.title]), status: getSelect(p[mp.status]) ?? "Activo", area: getSelect(p[mp.area]), progress: Number(getNumber(p[mp.progress]) ?? 0), provider: getSelect(p[mp.provider]), tags: getMulti(p[mp.tags]) };
+    const idClass = mp?.id_class ? (getSelect(p[mp.id_class]) ?? getRich(p[mp.id_class]) ?? null) : null;
+    return { id: pg.id, title: getTitle(p[mp.title]), status: getSelect(p[mp.status]) ?? "Activo", area: getSelect(p[mp.area]), progress: Number(getNumber(p[mp.progress]) ?? 0), provider: getSelect(p[mp.provider]), id_class: idClass, tags: getMulti(p[mp.tags]) };
   };
   const tReadings = (pg: any) => { const p = pg.properties, mp = m.readings;
     return { id: pg.id, title: getTitle(p[mp.title]), type: getSelect(p[mp.type]), course: getSelect(p[mp.course]), status: getSelect(p[mp.status]), source: getSelect(p[mp.source]), tags: getMulti(p[mp.tags]), due: getDateISO(p[mp.due]) };

@@ -20,7 +20,7 @@ const DEFAULT_MAPPING = {
     reviews: { title: "Revisión", period: "Periodo", mood: "Estado", highlights: "Highlights", next: "Siguientes" },
     calendar: { title: "Evento", start: "Inicio", end: "Fin", related: "Relacionado" },
     studies: {
-      courses: { title: "Curso", status: "Estado", area: "Área", progress: "Progreso", provider: "Proveedor", tags: "Tags" },
+      courses: { title: "Curso", status: "Estado", area: "Área", progress: "Progreso", provider: "Proveedor", id_class: "ID Class", tags: "Tags" },
       modules: { title: "Módulo", status: "Estado", course: "Curso", order: "Orden" },
       readings: { title: "Lectura", type: "Tipo", course: "Curso", status: "Estado", source: "Fuente", tags: "Tags", due: "Para" },
       lessons: { title: "Lección", module: "Módulo", course: "Curso", status: "Estado", order: "Orden" },
