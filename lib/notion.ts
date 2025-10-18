@@ -15,8 +15,25 @@ export function getUrl(p: NotionProp): string | null { return p?.url ?? null; }
 export function getRelationIds(p: NotionProp): string[] { return (p?.relation ?? []).map((r: any) => r.id); }
 
 export async function queryDb(database_id: string, body: any = {}) {
-  const res = await notion.databases.query({ database_id, ...body });
-  return res.results as any[];
+  const { start_cursor: initialCursor, ...rest } = body ?? {};
+  const results: any[] = [];
+  let cursor: string | undefined = initialCursor;
+
+  while (true) {
+    const response = await notion.databases.query({
+      database_id,
+      ...rest,
+      ...(cursor ? { start_cursor: cursor } : {}),
+    });
+
+    results.push(...((response.results as any[]) ?? []));
+
+    if (!response.has_more || !response.next_cursor) break;
+
+    cursor = response.next_cursor ?? undefined;
+  }
+
+  return results;
 }
 export async function retrievePage(pageId: string) { return await notion.pages.retrieve({ page_id: pageId }); }
 export function findTitleProperty(properties: Record<string, any>): string | null {
