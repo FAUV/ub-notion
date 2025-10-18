@@ -16,6 +16,9 @@ import {
   ClipboardList,
   ListTodo,
   GraduationCap,
+  Plus,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -28,6 +31,15 @@ import {
   PieChart as PieC,
   Pie,
 } from "recharts";
+import FormModal from "./components/forms/FormModal";
+import TaskForm from "./components/forms/TaskForm";
+import ProjectForm from "./components/forms/ProjectForm";
+import AreaForm from "./components/forms/AreaForm";
+import NoteForm from "./components/forms/NoteForm";
+import GoalForm from "./components/forms/GoalForm";
+import HabitForm from "./components/forms/HabitForm";
+import ReviewForm from "./components/forms/ReviewForm";
+import CalendarForm from "./components/forms/CalendarForm";
 
 const CL_TZ = "America/Santiago";
 
@@ -208,6 +220,115 @@ function formatTimeCL(iso) { return new Date(iso).toLocaleTimeString("es-CL", { 
 function formatDateCL(iso) { return new Date(iso).toLocaleDateString("es-CL", { timeZone: CL_TZ }); }
 function dateKeyCL(iso) { return new Date(iso).toLocaleDateString("en-CA", { timeZone: CL_TZ }); }
 
+const UB_API_KEY = process.env.NEXT_PUBLIC_UB_API_KEY ?? "";
+
+const FORM_COMPONENTS = {
+  tasks: TaskForm,
+  projects: ProjectForm,
+  areas: AreaForm,
+  notes: NoteForm,
+  goals: GoalForm,
+  habits: HabitForm,
+  reviews: ReviewForm,
+  calendar: CalendarForm,
+};
+
+const ENTITY_LABELS = {
+  tasks: "tarea",
+  projects: "proyecto",
+  areas: "área",
+  notes: "nota",
+  goals: "objetivo",
+  habits: "hábito",
+  reviews: "revisión",
+  calendar: "evento",
+};
+
+function mapRecordForForm(entity, record) {
+  if (!record) return {};
+  switch (entity) {
+    case "tasks":
+      return {
+        id: record.id,
+        title: record.title ?? "",
+        status: record.status ?? "",
+        priority: record.priority ?? "",
+        area: record.area ?? "",
+        due: record.due ?? null,
+        scheduled: record.scheduled ?? null,
+        project: record.project_ids ?? [],
+        tags: record.tags ?? [],
+        energy: record.energy ?? "",
+        effort: record.effort ?? "",
+      };
+    case "projects":
+      return {
+        id: record.id,
+        title: record.title ?? "",
+        status: record.status ?? "",
+        area: record.area ?? "",
+        due: record.due ?? null,
+        progress: record.progress ?? null,
+        lead: record.lead ?? "",
+        tags: record.tags ?? [],
+      };
+    case "areas":
+      return {
+        id: record.id,
+        title: record.title ?? "",
+        owner: record.owner ?? "",
+        mission: record.mission ?? "",
+        tags: record.tags ?? [],
+      };
+    case "notes":
+      return {
+        id: record.id,
+        title: record.title ?? "",
+        type: record.type ?? "",
+        area: record.area ?? "",
+        project: record.project_ids ?? [],
+        tags: record.tags ?? [],
+      };
+    case "goals":
+      return {
+        id: record.id,
+        title: record.title ?? "",
+        horizon: record.horizon ?? "",
+        progress: record.progress ?? null,
+        area: record.area ?? "",
+        due: record.due ?? null,
+        tags: record.tags ?? [],
+      };
+    case "habits":
+      return {
+        id: record.id,
+        title: record.title ?? "",
+        streak: record.streak ?? null,
+        last: record.last ?? null,
+        cadence: record.cadence ?? "",
+      };
+    case "reviews":
+      return {
+        id: record.id,
+        title: record.title ?? "",
+        period: record.period ?? "",
+        mood: record.mood ?? "",
+        highlights: record.highlights ?? "",
+        next: record.next ?? "",
+      };
+    case "calendar":
+      return {
+        id: record.id,
+        title: record.title ?? "",
+        start: record.start ?? null,
+        end: record.end ?? null,
+        related: record.related_ids ?? [],
+      };
+    default:
+      return { ...record };
+  }
+}
+
 function Badge({ children }) {
   return (
     <span className="px-2 py-1 rounded-xl text-xs bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700">
@@ -253,7 +374,7 @@ function Card({ title, subtitle, right, children, className = "" }) {
     </div>
   );
 }
-function DataTable({ columns, rows }) {
+function DataTable({ columns, rows, onEditRow, onDeleteRow }) {
   return (
     <div className="overflow-auto max-h-[440px] rounded-2xl border border-neutral-200/60 dark:border-neutral-800/60">
       <table className="min-w-full text-sm">
@@ -262,6 +383,7 @@ function DataTable({ columns, rows }) {
             {columns.map((c) => (
               <th key={c.key || c.title} className="px-5 py-3 font-medium">{c.title}</th>
             ))}
+            {(onEditRow || onDeleteRow) && <th className="px-5 py-3 font-medium text-right">Acciones</th>}
           </tr>
         </thead>
         <tbody>
@@ -272,6 +394,30 @@ function DataTable({ columns, rows }) {
                   {c.render ? c.render(r[c.key], r) : r[c.key]}
                 </td>
               ))}
+              {(onEditRow || onDeleteRow) && (
+                <td className="px-5 py-3">
+                  <div className="flex justify-end gap-2">
+                    {onEditRow && (
+                      <button
+                        type="button"
+                        onClick={() => onEditRow(r)}
+                        className="inline-flex items-center gap-1 rounded-full border border-neutral-300 px-3 py-1 text-xs transition hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800"
+                      >
+                        <Pencil className="h-3.5 w-3.5" /> Editar
+                      </button>
+                    )}
+                    {onDeleteRow && (
+                      <button
+                        type="button"
+                        onClick={() => onDeleteRow(r)}
+                        className="inline-flex items-center gap-1 rounded-full border border-rose-300 px-3 py-1 text-xs text-rose-600 transition hover:bg-rose-50 dark:border-rose-500/60 dark:text-rose-300 dark:hover:bg-rose-500/10"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" /> Eliminar
+                      </button>
+                    )}
+                  </div>
+                </td>
+              )}
             </tr>
           ))}
         </tbody>
@@ -407,7 +553,7 @@ function TodayPage({ tasks, calendar }) {
   );
 }
 
-function TasksPage({ tasks }) {
+function TasksPage({ tasks, onCreate, onEdit, onDelete }) {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("Todos");
   const [area, setArea] = useState("Todas");
@@ -483,14 +629,31 @@ function TasksPage({ tasks }) {
           </select>
         </label>
       </div>
-      <Card title="Lista" subtitle="Vista de tareas" right={<Badge>{filtered.length}</Badge>}>
-        <DataTable columns={cols} rows={filtered} />
+      <Card
+        title="Lista"
+        subtitle="Vista de tareas"
+        right={
+          <div className="flex items-center gap-2">
+            {onCreate && (
+              <button
+                type="button"
+                onClick={onCreate}
+                className="inline-flex items-center gap-1 rounded-full border border-neutral-300 px-3 py-1 text-xs transition hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800"
+              >
+                <Plus className="h-3.5 w-3.5" /> Crear
+              </button>
+            )}
+            <Badge>{filtered.length}</Badge>
+          </div>
+        }
+      >
+        <DataTable columns={cols} rows={filtered} onEditRow={onEdit} onDeleteRow={onDelete} />
       </Card>
     </div>
   );
 }
 
-function ProjectsPage({ projects }) {
+function ProjectsPage({ projects, onCreate, onEdit, onDelete }) {
   const cols = [
     { key: "title", title: "Proyecto" },
     { key: "status", title: "Estado" },
@@ -515,14 +678,31 @@ function ProjectsPage({ projects }) {
         <Stat label="Hechos" value={projects.filter((p) => p.status === "Hecho").length} />
         <Stat label="Progreso medio" value={Math.round(projects.reduce((s, p) => s + p.progress, 0) / (projects.length || 1))} percent />
       </div>
-      <Card title="Proyectos" subtitle="Estado y avance" right={<Badge>{projects.length}</Badge>}>
-        <DataTable columns={cols} rows={projects} />
+      <Card
+        title="Proyectos"
+        subtitle="Estado y avance"
+        right={
+          <div className="flex items-center gap-2">
+            {onCreate && (
+              <button
+                type="button"
+                onClick={onCreate}
+                className="inline-flex items-center gap-1 rounded-full border border-neutral-300 px-3 py-1 text-xs transition hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800"
+              >
+                <Plus className="h-3.5 w-3.5" /> Crear
+              </button>
+            )}
+            <Badge>{projects.length}</Badge>
+          </div>
+        }
+      >
+        <DataTable columns={cols} rows={projects} onEditRow={onEdit} onDeleteRow={onDelete} />
       </Card>
     </div>
   );
 }
 
-function AreasPage({ areas }) {
+function AreasPage({ areas, onCreate, onEdit, onDelete }) {
   const cols = [
     { key: "title", title: "Área" },
     { key: "owner", title: "Responsable" },
@@ -536,14 +716,31 @@ function AreasPage({ areas }) {
         <Stat label="Con responsable" value={areas.filter((a) => a.owner).length} />
         <Stat label="Sin misión" value={areas.filter((a) => !a.mission).length} />
       </div>
-      <Card title="Áreas" subtitle="Responsables y propósito" right={<Badge>{areas.length}</Badge>}>
-        <DataTable columns={cols} rows={areas} />
+      <Card
+        title="Áreas"
+        subtitle="Responsables y propósito"
+        right={
+          <div className="flex items-center gap-2">
+            {onCreate && (
+              <button
+                type="button"
+                onClick={onCreate}
+                className="inline-flex items-center gap-1 rounded-full border border-neutral-300 px-3 py-1 text-xs transition hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800"
+              >
+                <Plus className="h-3.5 w-3.5" /> Crear
+              </button>
+            )}
+            <Badge>{areas.length}</Badge>
+          </div>
+        }
+      >
+        <DataTable columns={cols} rows={areas} onEditRow={onEdit} onDeleteRow={onDelete} />
       </Card>
     </div>
   );
 }
 
-function NotesPage({ notes }) {
+function NotesPage({ notes, onCreate, onEdit, onDelete }) {
   const tabs = [
     { key: "inbox", label: "Inbox" },
     { key: "notes", label: "Notes" },
@@ -582,7 +779,20 @@ function NotesPage({ notes }) {
       <Card
         title="Notas y Recursos"
         subtitle="Inbox y clasificaciones"
-        right={<Badge>{filtered.length}</Badge>}
+        right={
+          <div className="flex items-center gap-2">
+            {onCreate && (
+              <button
+                type="button"
+                onClick={onCreate}
+                className="inline-flex items-center gap-1 rounded-full border border-neutral-300 px-3 py-1 text-xs transition hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800"
+              >
+                <Plus className="h-3.5 w-3.5" /> Crear
+              </button>
+            )}
+            <Badge>{filtered.length}</Badge>
+          </div>
+        }
       >
         <div className="flex flex-wrap items-center gap-2 mb-4 text-xs">
           {tabs.map((tab) => (
@@ -599,13 +809,13 @@ function NotesPage({ notes }) {
             </button>
           ))}
         </div>
-        <DataTable columns={cols} rows={filtered} />
+        <DataTable columns={cols} rows={filtered} onEditRow={onEdit} onDeleteRow={onDelete} />
       </Card>
     </div>
   );
 }
 
-function ContentPage({ entries }) {
+function ContentPage({ entries, onCreate, onEdit, onDelete }) {
   const tabs = [
     { key: "active", label: "Active Now" },
     { key: "this-month", label: "This Month" },
@@ -646,7 +856,20 @@ function ContentPage({ entries }) {
       <Card
         title="Content Pipeline"
         subtitle="Creator's Companion"
-        right={<Badge>{filtered.length}</Badge>}
+        right={
+          <div className="flex items-center gap-2">
+            {onCreate && (
+              <button
+                type="button"
+                onClick={onCreate}
+                className="inline-flex items-center gap-1 rounded-full border border-neutral-300 px-3 py-1 text-xs transition hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800"
+              >
+                <Plus className="h-3.5 w-3.5" /> Crear
+              </button>
+            )}
+            <Badge>{filtered.length}</Badge>
+          </div>
+        }
       >
         <div className="flex flex-wrap items-center gap-2 mb-4 text-xs">
           {tabs.map((tab) => (
@@ -663,7 +886,7 @@ function ContentPage({ entries }) {
             </button>
           ))}
         </div>
-        <DataTable columns={columns} rows={filtered} />
+        <DataTable columns={columns} rows={filtered} onEditRow={onEdit} onDeleteRow={onDelete} />
       </Card>
     </div>
   );
@@ -702,7 +925,7 @@ function GoalsPage({ goals }) {
   );
 }
 
-function HabitsPage({ habits }) {
+function HabitsPage({ habits, onCreate, onEdit, onDelete }) {
   const cols = [
     { key: "title", title: "Hábito" },
     { key: "streak", title: "Racha" },
@@ -716,14 +939,31 @@ function HabitsPage({ habits }) {
         <Stat label="Hábitos activos" value={habits.length} />
         <Stat label="Hoy completados" value={habits.filter((h) => h.last === todayISO).length} />
       </div>
-      <Card title="Hábitos" subtitle="Seguimiento">
-        <DataTable columns={cols} rows={habits} />
+      <Card
+        title="Hábitos"
+        subtitle="Seguimiento"
+        right={
+          <div className="flex items-center gap-2">
+            {onCreate && (
+              <button
+                type="button"
+                onClick={onCreate}
+                className="inline-flex items-center gap-1 rounded-full border border-neutral-300 px-3 py-1 text-xs transition hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800"
+              >
+                <Plus className="h-3.5 w-3.5" /> Crear
+              </button>
+            )}
+            <Badge>{habits.length}</Badge>
+          </div>
+        }
+      >
+        <DataTable columns={cols} rows={habits} onEditRow={onEdit} onDeleteRow={onDelete} />
       </Card>
     </div>
   );
 }
 
-function ReviewsPage({ reviews }) {
+function ReviewsPage({ reviews, onCreate, onEdit, onDelete }) {
   const cols = [
     { key: "title", title: "Revisión" },
     { key: "period", title: "Periodo" },
@@ -733,14 +973,31 @@ function ReviewsPage({ reviews }) {
   ];
   return (
     <div className="space-y-6">
-      <Card title="Revisiones" subtitle="Weekly/Monthly">
-        <DataTable columns={cols} rows={reviews} />
+      <Card
+        title="Revisiones"
+        subtitle="Weekly/Monthly"
+        right={
+          <div className="flex items-center gap-2">
+            {onCreate && (
+              <button
+                type="button"
+                onClick={onCreate}
+                className="inline-flex items-center gap-1 rounded-full border border-neutral-300 px-3 py-1 text-xs transition hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800"
+              >
+                <Plus className="h-3.5 w-3.5" /> Crear
+              </button>
+            )}
+            <Badge>{reviews.length}</Badge>
+          </div>
+        }
+      >
+        <DataTable columns={cols} rows={reviews} onEditRow={onEdit} onDeleteRow={onDelete} />
       </Card>
     </div>
   );
 }
 
-function CalendarPage({ calendar }) {
+function CalendarPage({ calendar, onCreate, onEdit, onDelete }) {
   const cols = [
     { key: "title", title: "Evento" },
     { key: "start", title: "Inicio", render: (v) => formatDateCL(v) + " " + formatTimeCL(v) },
@@ -749,8 +1006,25 @@ function CalendarPage({ calendar }) {
   ];
   return (
     <div className="space-y-6">
-      <Card title="Calendario" subtitle="Eventos sincronizados" right={<Badge>{calendar.length}</Badge>}>
-        <DataTable columns={cols} rows={calendar} />
+      <Card
+        title="Calendario"
+        subtitle="Eventos sincronizados"
+        right={
+          <div className="flex items-center gap-2">
+            {onCreate && (
+              <button
+                type="button"
+                onClick={onCreate}
+                className="inline-flex items-center gap-1 rounded-full border border-neutral-300 px-3 py-1 text-xs transition hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800"
+              >
+                <Plus className="h-3.5 w-3.5" /> Crear
+              </button>
+            )}
+            <Badge>{calendar.length}</Badge>
+          </div>
+        }
+      >
+        <DataTable columns={cols} rows={calendar} onEditRow={onEdit} onDeleteRow={onDelete} />
       </Card>
     </div>
   );
@@ -939,6 +1213,8 @@ export default function UltimateBrainControlCenter() {
   const [habits, setHabits] = useState(MOCK.habits);
   const [reviews, setReviews] = useState(MOCK.reviews);
   const [calendar, setCalendar] = useState(MOCK.calendar);
+  const [modalState, setModalState] = useState({ open: false, entity: null, mode: "create", record: null });
+  const [feedback, setFeedback] = useState(null);
 
   const [courses, setCourses] = useState(MOCK.studies.courses);
   const [modules, setModules] = useState(MOCK.studies.modules);
@@ -988,24 +1264,74 @@ export default function UltimateBrainControlCenter() {
     return () => clearTimeout(id);
   }, [globalQuery, syncAll]);
 
-  async function saveMapping() {
-  try {
-    const res = await fetch("/api/ub/mapping", {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        // Incluye la clave sólo si existe una API key
-        "x-api-key": process.env.NEXT_PUBLIC_UB_API_KEY ?? "",
-      },
-      body: JSON.stringify(mapping),
-    });
-    if (!res.ok) throw new Error("save failed");
-    await syncAll();
-  } catch (e) {
-    console.error(e);
-  }
-}
+  useEffect(() => {
+    if (!feedback) return;
+    const timeout = setTimeout(() => setFeedback(null), 4000);
+    return () => clearTimeout(timeout);
+  }, [feedback]);
 
+  async function saveMapping() {
+    try {
+      const res = await fetch("/api/ub/mapping", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": UB_API_KEY,
+        },
+        body: JSON.stringify(mapping),
+      });
+      if (!res.ok) throw new Error("save failed");
+      await syncAll();
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  const closeModal = useCallback(() => {
+    setModalState({ open: false, entity: null, mode: "create", record: null });
+  }, []);
+
+  const openCreate = useCallback((entity) => {
+    setModalState({ open: true, entity, mode: "create", record: null });
+  }, []);
+
+  const openEdit = useCallback((entity, record) => {
+    setModalState({ open: true, entity, mode: "edit", record: mapRecordForForm(entity, record) });
+  }, []);
+
+  const handleDelete = useCallback(
+    async (entity, record) => {
+      if (!record?.id) return;
+      try {
+        const res = await fetch(`/api/ub/${entity}/${record.id}`, {
+          method: "DELETE",
+          headers: { "x-api-key": UB_API_KEY },
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(json?.error || "No se pudo eliminar");
+        setFeedback({ type: "success", message: "Registro eliminado" });
+        await syncAll();
+      } catch (err) {
+        setFeedback({ type: "error", message: err instanceof Error ? err.message : "Error al eliminar" });
+      }
+    },
+    [syncAll]
+  );
+
+  const handleFormSuccess = useCallback(
+    async (entity, mode) => {
+      closeModal();
+      const successMessage = mode === "edit" ? "Registro actualizado" : "Registro creado";
+      setFeedback({ type: "success", message: successMessage });
+      try {
+        await syncAll();
+      } catch (err) {
+        console.error(err);
+        setFeedback({ type: "error", message: "No se pudo refrescar la información" });
+      }
+    },
+    [closeModal, syncAll]
+  );
 
   function Field({ label, value, onChange, placeholder = "" }) {
     return (
@@ -1107,18 +1433,82 @@ export default function UltimateBrainControlCenter() {
     );
   }
 
+  const modalEntity = modalState.entity;
+  const modalMode = modalState.mode;
+  const FormComponent = modalEntity ? FORM_COMPONENTS[modalEntity] : null;
+  const formInitialValues = modalMode === "edit" ? modalState.record ?? {} : {};
+  const modalTitle = modalEntity
+    ? `${modalMode === "edit" ? "Editar" : "Crear"} ${ENTITY_LABELS[modalEntity] ?? modalEntity}`
+    : "";
+
   function render() {
     switch (page) {
       case "today":   return <TodayPage tasks={tasks} calendar={calendar} />;
-      case "tasks":   return <TasksPage tasks={tasks} />;
-      case "projects":return <ProjectsPage projects={projects} />;
-      case "areas":   return <AreasPage areas={areas} />;
-      case "content": return <ContentPage entries={notes} />;
-      case "notes":   return <NotesPage notes={notes} />;
+      case "tasks":   return (
+        <TasksPage
+          tasks={tasks}
+          onCreate={() => openCreate("tasks")}
+          onEdit={(row) => openEdit("tasks", row)}
+          onDelete={(row) => handleDelete("tasks", row)}
+        />
+      );
+      case "projects":return (
+        <ProjectsPage
+          projects={projects}
+          onCreate={() => openCreate("projects")}
+          onEdit={(row) => openEdit("projects", row)}
+          onDelete={(row) => handleDelete("projects", row)}
+        />
+      );
+      case "areas":   return (
+        <AreasPage
+          areas={areas}
+          onCreate={() => openCreate("areas")}
+          onEdit={(row) => openEdit("areas", row)}
+          onDelete={(row) => handleDelete("areas", row)}
+        />
+      );
+      case "content": return (
+        <ContentPage
+          entries={notes}
+          onCreate={() => openCreate("notes")}
+          onEdit={(row) => openEdit("notes", row)}
+          onDelete={(row) => handleDelete("notes", row)}
+        />
+      );
+      case "notes":   return (
+        <NotesPage
+          notes={notes}
+          onCreate={() => openCreate("notes")}
+          onEdit={(row) => openEdit("notes", row)}
+          onDelete={(row) => handleDelete("notes", row)}
+        />
+      );
       case "goals":   return <GoalsPage goals={goals} />;
-      case "habits":  return <HabitsPage habits={habits} />;
-      case "reviews": return <ReviewsPage reviews={reviews} />;
-      case "calendar":return <CalendarPage calendar={calendar} />;
+      case "habits":  return (
+        <HabitsPage
+          habits={habits}
+          onCreate={() => openCreate("habits")}
+          onEdit={(row) => openEdit("habits", row)}
+          onDelete={(row) => handleDelete("habits", row)}
+        />
+      );
+      case "reviews": return (
+        <ReviewsPage
+          reviews={reviews}
+          onCreate={() => openCreate("reviews")}
+          onEdit={(row) => openEdit("reviews", row)}
+          onDelete={(row) => handleDelete("reviews", row)}
+        />
+      );
+      case "calendar":return (
+        <CalendarPage
+          calendar={calendar}
+          onCreate={() => openCreate("calendar")}
+          onEdit={(row) => openEdit("calendar", row)}
+          onDelete={(row) => handleDelete("calendar", row)}
+        />
+      );
       case "studies": return <StudiesPage
                               courses={courses} modules={modules} lessons={lessons}
                               readings={readings} studyNotes={studyNotes}
@@ -1150,6 +1540,19 @@ export default function UltimateBrainControlCenter() {
           </div>
         </div>
       </header>
+      {feedback && (
+        <div className="mx-auto mt-4 w-full max-w-3xl px-6">
+          <div
+            className={`rounded-2xl border px-4 py-3 text-sm ${
+              feedback.type === "success"
+                ? "border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-500/60 dark:bg-emerald-500/10 dark:text-emerald-200"
+                : "border-rose-300 bg-rose-50 text-rose-600 dark:border-rose-500/60 dark:bg-rose-500/10 dark:text-rose-200"
+            }`}
+          >
+            {feedback.message}
+          </div>
+        </div>
+      )}
       <div className="max-w-7xl mx-auto px-6 py-6 grid lg:grid-cols-[220px_1fr] gap-6">
         <aside className="lg:sticky lg:top-[84px] h-max">
           <nav className="space-y-1">
@@ -1171,6 +1574,18 @@ export default function UltimateBrainControlCenter() {
       <footer className="max-w-7xl mx-auto px-6 pb-10 text-xs text-neutral-500">
         Esta UI usa endpoints <code className="px-1 rounded bg-neutral-200/60 dark:bg-neutral-800/60">/api/ub/*</code> y un <em>mapping</em> de propiedades (persistible) para calzar al 100% con tu Ultimate Brain.
       </footer>
+      <FormModal title={modalTitle} open={modalState.open && Boolean(FormComponent)} onClose={closeModal}>
+        {FormComponent && modalEntity && (
+          <FormComponent
+            mode={modalMode}
+            initialValues={formInitialValues}
+            onCancel={closeModal}
+            onSuccess={async () => {
+              await handleFormSuccess(modalEntity, modalMode);
+            }}
+          />
+        )}
+      </FormModal>
     </div>
   );
 }

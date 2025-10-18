@@ -5,6 +5,13 @@ export const CL_TZ = process.env.NOTION_TIMEZONE || "America/Santiago";
 
 export type NotionProp = any;
 
+export class MappingValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "MappingValidationError";
+  }
+}
+
 export function getTitle(p: NotionProp): string { return p?.title?.[0]?.plain_text ?? ""; }
 export function getSelect(p: NotionProp): string | null { return p?.select?.name ?? null; }
 export function getMulti(p: NotionProp): string[] { return (p?.multi_select ?? []).map((o: any) => o.name); }
@@ -60,4 +67,147 @@ export async function resolveRelationTitles(ids: string[]): Promise<Record<strin
     });
   }
   return out;
+}
+
+type DatabaseSchema = Record<string, { type: string } & Record<string, any>>;
+const schemaCache = new Map<string, DatabaseSchema>();
+
+async function getDatabaseSchema(databaseId: string): Promise<DatabaseSchema> {
+  if (schemaCache.has(databaseId)) return schemaCache.get(databaseId)!;
+  const db = await notion.databases.retrieve({ database_id: databaseId });
+  const props = (db as any)?.properties ?? {};
+  schemaCache.set(databaseId, props);
+  return props;
+}
+
+function ensurePropertyName(alias: string, mapping: Record<string, string | undefined>): string {
+  const notionProp = mapping[alias];
+  if (!notionProp) throw new MappingValidationError(`Propiedad desconocida para el alias "${alias}"`);
+  return notionProp;
+}
+
+function toTextRich(value: string | undefined | null) {
+  const text = value ?? "";
+  if (!text) return [];
+  return [{ type: "text", text: { content: text } }];
+}
+
+function mapValueToProperty(value: any, property: any, alias: string) {
+  const type = property?.type;
+  switch (type) {
+    case "title": {
+      if (typeof value !== "string") throw new MappingValidationError(`"${alias}" requiere texto`);
+      return { title: toTextRich(value) };
+    }
+    case "rich_text": {
+      if (typeof value !== "string") throw new MappingValidationError(`"${alias}" requiere texto enriquecido`);
+      return { rich_text: toTextRich(value) };
+    }
+    case "select": {
+      if (value === null || value === undefined || value === "") return { select: null };
+      if (typeof value !== "string") throw new MappingValidationError(`"${alias}" requiere una opción (texto)`);
+      return { select: { name: value } };
+    }
+    case "status": {
+      if (value === null || value === undefined || value === "") return { status: null };
+      if (typeof value !== "string") throw new MappingValidationError(`"${alias}" requiere un estado válido`);
+      return { status: { name: value } };
+    }
+    case "multi_select": {
+      if (!Array.isArray(value)) throw new MappingValidationError(`"${alias}" requiere una lista`);
+      return { multi_select: value.filter((name: string) => Boolean(name)).map((name: string) => ({ name: String(name) })) };
+    }
+    case "relation": {
+      if (!Array.isArray(value)) throw new MappingValidationError(`"${alias}" requiere IDs de relación (lista)`);
+      return { relation: value.filter((id: string) => Boolean(id)).map((id: string) => ({ id: String(id) })) };
+    }
+    case "people": {
+      if (!Array.isArray(value)) throw new MappingValidationError(`"${alias}" requiere IDs de personas (lista)`);
+      return { people: value.filter((id: string) => Boolean(id)).map((id: string) => ({ id: String(id) })) };
+    }
+    case "number": {
+      if (value === null || value === undefined || value === "") return { number: null };
+      if (typeof value !== "number" || Number.isNaN(value)) throw new MappingValidationError(`"${alias}" requiere número válido`);
+      return { number: value };
+    }
+    case "checkbox": {
+      if (typeof value !== "boolean") throw new MappingValidationError(`"${alias}" requiere booleano`);
+      return { checkbox: value };
+    }
+    case "date": {
+      if (!value) return { date: null };
+      if (typeof value === "string") return { date: { start: value } };
+      if (typeof value === "object" && (value.start || value.end)) {
+        return { date: { start: value.start ?? null, end: value.end ?? null } };
+      }
+      throw new MappingValidationError(`"${alias}" requiere fecha ISO (YYYY-MM-DD)`);
+    }
+    case "url": {
+      if (value === null || value === undefined || value === "") return { url: null };
+      if (typeof value !== "string") throw new MappingValidationError(`"${alias}" requiere URL`);
+      return { url: value };
+    }
+    case "email": {
+      if (value === null || value === undefined || value === "") return { email: null };
+      if (typeof value !== "string") throw new MappingValidationError(`"${alias}" requiere email`);
+      return { email: value };
+    }
+    case "phone_number": {
+      if (value === null || value === undefined || value === "") return { phone_number: null };
+      if (typeof value !== "string") throw new MappingValidationError(`"${alias}" requiere teléfono`);
+      return { phone_number: value };
+    }
+    default:
+      throw new MappingValidationError(`Propiedad Notion no soportada: ${String(type ?? "desconocida")}`);
+  }
+}
+
+interface BuildOptions { allowEmpty?: boolean; }
+
+async function buildPropertiesFromMapping(
+  databaseId: string,
+  mapping: Record<string, string>,
+  data: Record<string, any>,
+  options: BuildOptions = {}
+) {
+  const schema = await getDatabaseSchema(databaseId);
+  const entries = Object.entries(data ?? {}).filter(([, value]) => value !== undefined);
+  const properties: Record<string, any> = {};
+
+  for (const [alias, rawValue] of entries) {
+    const notionProp = ensurePropertyName(alias, mapping);
+    const property = schema[notionProp];
+    if (!property) throw new MappingValidationError(`La propiedad "${notionProp}" no existe en la base de datos`);
+    const value = mapValueToProperty(rawValue, property, alias);
+    properties[notionProp] = value;
+  }
+
+  if (!options.allowEmpty && Object.keys(properties).length === 0) {
+    throw new MappingValidationError("No se proporcionaron campos válidos para sincronizar");
+  }
+
+  return properties;
+}
+
+export async function createPageFromMapping(
+  databaseId: string,
+  mapping: Record<string, string>,
+  data: Record<string, any>
+) {
+  const properties = await buildPropertiesFromMapping(databaseId, mapping, data, { allowEmpty: false });
+  return notion.pages.create({ parent: { database_id: databaseId }, properties });
+}
+
+export async function updatePageFromMapping(
+  pageId: string,
+  databaseId: string,
+  mapping: Record<string, string>,
+  data: Record<string, any>
+) {
+  const properties = await buildPropertiesFromMapping(databaseId, mapping, data, { allowEmpty: false });
+  return notion.pages.update({ page_id: pageId, properties });
+}
+
+export async function deletePage(pageId: string) {
+  return notion.pages.update({ page_id: pageId, archived: true });
 }
