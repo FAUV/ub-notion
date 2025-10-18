@@ -22,7 +22,14 @@ npm run dev
 - `NOTION_TIMEZONE` (opcional, por defecto America/Santiago).
 - `UB_API_KEY` (opcional): si se define, los endpoints exigirán `x-api-key` o `?api_key=`.
 - `NEXT_PUBLIC_UB_API_KEY` (opcional): expuesto al cliente, se usa para llamar a `/api/ub/*`.
+- `UB_MAPPING_PATH` (opcional): ruta absoluta donde persistir el mapping si no quieres el valor por defecto.
 - `VERCEL_*` (opcional para CI/CD): `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`.
+
+## Persistencia del mapping
+- Por defecto, el archivo de mapeo se crea como `.ub_mapping.json` en el directorio del proyecto.
+- En despliegues de solo lectura (p. ej. Vercel) el backend no puede escribir ahí, por lo que se utiliza automáticamente `/tmp/ub_mapping.json`.
+- Puedes forzar otra ubicación estableciendo la variable `UB_MAPPING_PATH`. Asegúrate de que el directorio sea escribible.
+- Recuerda que `/tmp` se borra en cada reinicio del contenedor/serverless, por lo que conviene rehidratar el mapping en cada despliegue.
 
 ## Despliegue con Vercel (CI/CD)
 1. Crea repo en GitHub y **sube** este código (ver `scripts/push_to_github.sh`).

@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
-import { promises as fs } from "node:fs";
-import path from "node:path";
+import { readFromFile, writeToFile } from "@/lib/mappingStore";
 import { apiKeyOk, rateLimitOk } from "../_utils/rateLimit";
 
-const FILE = path.join(process.cwd(), ".ub_mapping.json");
 const DEFAULT_MAPPING = {
   db: {
     tasks: "", projects: "", areas: "", notes: "", goals: "",
@@ -30,8 +28,14 @@ const DEFAULT_MAPPING = {
     },
   },
 };
-async function readMapping() { try { return JSON.parse(await fs.readFile(FILE, "utf-8")); } catch { return DEFAULT_MAPPING; } }
-async function writeMapping(data: any) { await fs.writeFile(FILE, JSON.stringify(data, null, 2), "utf-8"); }
+async function readMapping() {
+  const stored = await readFromFile<typeof DEFAULT_MAPPING>();
+  return stored ?? DEFAULT_MAPPING;
+}
+
+async function writeMapping(data: any) {
+  await writeToFile(data);
+}
 
 export async function GET(req: Request) {
   if (!apiKeyOk(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });

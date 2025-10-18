@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { promises as fs } from "node:fs";
-import path from "node:path";
 import { queryDb, getTitle, getSelect, getMulti, getDateISO, getNumber, getRich, getRelationIds, resolveRelationTitles } from "@/lib/notion";
+import { readFromFile } from "@/lib/mappingStore";
 import { apiKeyOk, rateLimitOk } from "../_utils/rateLimit";
 
-const FILE2 = path.join(process.cwd(), ".ub_mapping.json");
-async function loadMapping() { try { return JSON.parse(await fs.readFile(FILE2, "utf-8")); } catch { return null; } }
+async function loadMapping() {
+  return readFromFile<any>();
+}
 function pick(p: any, key: string) { return p?.[key]; }
 
 function buildFilters(entity: string, props: any, searchParams: URLSearchParams) {
