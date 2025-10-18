@@ -1,39 +1,22 @@
 import { NextResponse } from "next/server";
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { DEFAULT_MAPPING, type MappingStore } from "@/lib/mappingStore";
 import { apiKeyOk, rateLimitOk } from "../_utils/rateLimit";
 
 const FILE = path.join(process.cwd(), ".ub_mapping.json");
-const DEFAULT_MAPPING = {
-  db: {
-    tasks: "", projects: "", areas: "", notes: "", goals: "",
-    habits: "", reviews: "", calendar: "",
-    studies: { courses: "", readings: "", study_notes: "", resources: "", exams: "", flashcards: "", sessions: "", modules: "", lessons: "" },
-  },
-  props: {
-    tasks: { title: "Tarea", status: "Estado", project: "Proyecto", area: "Área", priority: "Prioridad", due: "Fecha límite", scheduled: "Programado", energy: "Energía", effort: "Esfuerzo", tags: "Tags", created: "Creado", updated: "Actualizado" },
-    projects: { title: "Proyecto", status: "Estado", area: "Área", due: "Fecha objetivo", progress: "Progreso", lead: "Responsable", tags: "Tags" },
-    areas: { title: "Área", owner: "Responsable", mission: "Misión", tags: "Tags" },
-    notes: { title: "Título", type: "Tipo", area: "Área", project: "Proyecto", tags: "Tags", updated: "Actualizado" },
-    goals: { title: "Objetivo", horizon: "Horizonte", progress: "Progreso", area: "Área", tags: "Tags" },
-    habits: { title: "Hábito", streak: "Racha", last: "Última vez", cadence: "Cadencia" },
-    reviews: { title: "Revisión", period: "Periodo", mood: "Estado", highlights: "Highlights", next: "Siguientes" },
-    calendar: { title: "Evento", start: "Inicio", end: "Fin", related: "Relacionado" },
-    studies: {
-      courses: { title: "Curso", status: "Estado", area: "Área", progress: "Progreso", provider: "Proveedor", id_class: "ID Class", tags: "Tags" },
-      modules: { title: "Módulo", status: "Estado", course: "Curso", order: "Orden" },
-      readings: { title: "Lectura", type: "Tipo", course: "Curso", status: "Estado", source: "Fuente", tags: "Tags", due: "Para" },
-      lessons: { title: "Lección", module: "Módulo", course: "Curso", status: "Estado", order: "Orden" },
-      study_notes: { title: "Nota", course: "Curso", reading: "Lectura", concepts: "Conceptos", tags: "Tags", updated: "Actualizado" },
-      resources: { title: "Recurso", type: "Tipo", link: "Enlace", course: "Curso", tags: "Tags" },
-      exams: { title: "Evaluación", course: "Curso", date: "Fecha", weight: "Ponderación", status: "Estado", tags: "Tags" },
-      flashcards: { front: "Frente", back: "Reverso", deck: "Baraja", ease: "Facilidad", interval: "Intervalo", due: "Revisión" },
-      sessions: { date: "Fecha", duration: "Duración(min)", course: "Curso", topic: "Tema", notes: "Notas" },
-    },
-  },
-};
-async function readMapping() { try { return JSON.parse(await fs.readFile(FILE, "utf-8")); } catch { return DEFAULT_MAPPING; } }
-async function writeMapping(data: any) { await fs.writeFile(FILE, JSON.stringify(data, null, 2), "utf-8"); }
+
+async function readMapping(): Promise<MappingStore> {
+  try {
+    return JSON.parse(await fs.readFile(FILE, "utf-8")) as MappingStore;
+  } catch {
+    return DEFAULT_MAPPING;
+  }
+}
+
+async function writeMapping(data: MappingStore) {
+  await fs.writeFile(FILE, JSON.stringify(data, null, 2), "utf-8");
+}
 
 export async function GET(req: Request) {
   if (!apiKeyOk(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -42,11 +25,12 @@ export async function GET(req: Request) {
   const json = await readMapping();
   return NextResponse.json(json, { headers: { "Cache-Control": "no-cache" } });
 }
+
 export async function PUT(req: Request) {
   if (!apiKeyOk(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const ip = (req.headers.get("x-forwarded-for") || "").split(",")[0] || "local";
   if (!rateLimitOk(`mapping:PUT:${ip}`)) return NextResponse.json({ error: "rate_limited" }, { status: 429 });
-  const body = await req.json();
+  const body = (await req.json()) as MappingStore;
   await writeMapping(body);
   return NextResponse.json({ ok: true });
 }

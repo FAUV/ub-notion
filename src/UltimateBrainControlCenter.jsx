@@ -144,6 +144,7 @@ const DEFAULT_MAPPING = {
         status: "Estado",
         course: "Curso",
         order: "Orden",
+        lessons: "Lecciones",
       },
       readings: {
         title: "Lectura",
