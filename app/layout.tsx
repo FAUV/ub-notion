@@ -1,6 +1,7 @@
 import './globals.css'
 import { PWAProvider } from './pwa-provider'
 import AppUpdateToast from './app-update-toast'
+import { ReactQueryProvider } from '@/lib/react-query/provider'
 import type { ReactNode } from 'react'
 
 export const metadata = {
@@ -20,10 +21,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       </head>
       <body>
-        <PWAProvider>
-          {children}
-          <AppUpdateToast />
-        </PWAProvider>
+        <ReactQueryProvider>
+          <PWAProvider>
+            {children}
+            <AppUpdateToast />
+          </PWAProvider>
+        </ReactQueryProvider>
       </body>
     </html>
   )
