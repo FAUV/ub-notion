@@ -1,6 +1,7 @@
 # Ultimate Brain – Notion Control Center (Prod Ready)
 
 Repo listo para desplegar en **Vercel** o **Docker**. Incluye:
+
 - App Router (Next.js) con **Tailwind**.
 - UI completa (Estudios + mapping recursivo + búsqueda + expansión de relaciones).
 - **SDK Notion** con endpoints `/api/ub/*` y utilidades.
@@ -10,6 +11,7 @@ Repo listo para desplegar en **Vercel** o **Docker**. Incluye:
 - Script para **empujar a GitHub** desde tu máquina con un token.
 
 ## Puesta en marcha local
+
 ```bash
 npm install          # usa pnpm/yarn si prefieres
 cp .env.local.example .env.local
@@ -18,6 +20,7 @@ npm run dev
 ```
 
 ## Variables de entorno (/.env.local)
+
 - `NOTION_TOKEN` (requerido): token de integración de Notion.
 - `NOTION_TIMEZONE` (opcional, por defecto America/Santiago).
 - `UB_API_KEY` (opcional): si se define, los endpoints exigirán `x-api-key` o `?api_key=`.
@@ -25,6 +28,7 @@ npm run dev
 - `VERCEL_*` (opcional para CI/CD): `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`.
 
 ## Flujo de edición (CRUD sobre Notion)
+
 - Define `NEXT_PUBLIC_UB_API_KEY` junto a `UB_API_KEY` cuando quieras permitir altas/ediciones desde la UI. El valor se envía en la cabecera `x-api-key` al consumir `/api/ub/*`.
 - Los helpers del servidor (`createPageFromMapping`, `updatePageFromMapping` y `deletePage`) construyen automáticamente el payload según el mapping persistido en `.ub_mapping.json` y llaman a `notion.pages.create/update`.
 - Las rutas HTTP aceptan:
@@ -35,6 +39,7 @@ npm run dev
 - Asegúrate de mapear correctamente tus propiedades de Notion y de tener `NOTION_TOKEN` configurado; sin ello, los helpers no podrán inferir tipos y las operaciones fallarán.
 
 ## Despliegue con Vercel (CI/CD)
+
 1. Crea repo en GitHub y **sube** este código (ver `scripts/push_to_github.sh`).
 2. En GitHub → *Settings → Secrets and variables → Actions*, añade:
    - `VERCEL_TOKEN`
@@ -56,6 +61,7 @@ bash scripts/push_to_github.sh YOUR_GITHUB_USERNAME your-repo-name
 ```
 
 ## Notas de producción
+
 - Se requiere Node.js 20.x (`.nvmrc` incluido); CI valida en Node 20 y 22.
 - El `service worker` (`public/sw.js`) cachea shell + assets y se combina con `/offline` y el toast `app/app-update-toast.tsx`.
 - Sustituye los íconos de `public/*.png` por arte real antes de publicar.
