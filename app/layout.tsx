@@ -2,6 +2,7 @@ import './globals.css'
 import { PWAProvider } from './pwa-provider'
 import AppUpdateToast from './app-update-toast'
 import { ReactQueryProvider } from '@/lib/react-query/provider'
+import { SpeedInsights } from '@vercel/speed-insights/next'
 import type { ReactNode } from 'react'
 
 export const metadata = {
@@ -27,6 +28,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             <AppUpdateToast />
           </PWAProvider>
         </ReactQueryProvider>
+        <SpeedInsights />
       </body>
     </html>
   )
